@@ -18,7 +18,7 @@ if (assimp_FOUND)
     set_target_properties(${ASSIMP_LIBRARY} PROPERTIES IMPORTED_LOCATION "${ASSIMP_LIBRARY_DIRS}/libassimp.so")
 endif(assimp_FOUND)
 
-add_library( CG_Engine STATIC ${Eng_SOURCES} ) 
+add_library( CG_Engine STATIC ${Eng_SOURCES} CG_Engine/glad.c ) 
 target_link_libraries( CG_Engine glfw assimp glm dl )
 include_directories( "include" )
 include_directories( "$(PROJECT_SOURCE_DIR)/CG_Engine" )
