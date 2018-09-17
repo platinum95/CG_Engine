@@ -55,9 +55,11 @@ namespace GL_Engine{
 			throw std::runtime_error("Error linking Shader\n" + std::string(ErrorBuffer));
 			return 0;
 		}
-
+                unsigned int tempVao;
+                glGenVertexArrays( 1, &tempVao );
+                glBindVertexArray( tempVao );
 		glValidateProgram(ShaderID);
-		
+		glDeleteVertexArrays( 1, &tempVao );
 		glGetProgramiv(ShaderID, GL_VALIDATE_STATUS, &Result);
 		if (!Result) {
 			glGetProgramInfoLog(ShaderID, sizeof(ErrorBuffer), NULL, ErrorBuffer);
@@ -167,7 +169,7 @@ namespace GL_Engine{
 		this->TextureLocations[_AttributeName] = _Location;
 	}
 
-	void Shader::RegisterUBO(std::string &_UBO_Name, CG_Data::UBO *_ubo) {
+	void Shader::RegisterUBO(const std::string &_UBO_Name, CG_Data::UBO *_ubo) {
 		UBO_Struct ubo_struct;
 		ubo_struct.ubo = _ubo;
 		UBO_BlockIndices[_UBO_Name] = ubo_struct;
