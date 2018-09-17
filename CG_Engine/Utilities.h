@@ -1,7 +1,7 @@
 #pragma once
-#include <glm\mat4x4.hpp>
-#include <glm\vec4.hpp>
-#include <assimp\scene.h>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+#include <assimp/scene.h>
 #include <iostream>
 
 namespace GL_Engine {

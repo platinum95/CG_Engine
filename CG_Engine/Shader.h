@@ -39,7 +39,7 @@ namespace GL_Engine{
 
 		CG_Data::Uniform* RegisterUniform(const char* _UniformName, std::function<void(const CG_Data::Uniform&)> _CallbackFunction);
 
-		void RegisterUBO(std::string &_UBO_Name, CG_Data::UBO *_ubo);
+		void RegisterUBO(const std::string &_UBO_Name, CG_Data::UBO *_ubo);
 		CG_Data::Uniform* GetUniform(uint8_t index) const;
 		CG_Data::Uniform* GetUniform(std::string _uName);
 
