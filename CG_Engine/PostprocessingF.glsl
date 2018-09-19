@@ -15,13 +15,13 @@ vec4 blur(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
 	for(int i =0; i < 7; i++){
 	colors[i] = vec3(0, 0, 0);
 	}
-    colors[0] = texture2D(image, uv).rgb * 0.1964825501511404;
-	colors[1] = texture2D(image, uv + (off1 / resolution)).rgb * 0.2969069646728344;
-	colors[2] = texture2D(image, uv - (off1 / resolution)).rgb * 0.2969069646728344;
-	colors[3] = texture2D(image, uv + (off2 / resolution)).rgb * 0.09447039785044732;
-	colors[4] = texture2D(image, uv - (off2 / resolution)).rgb * 0.09447039785044732;
-	colors[5] = texture2D(image, uv + (off3 / resolution)).rgb * 0.010381362401148057;
-	colors[6] = texture2D(image, uv - (off3 / resolution)).rgb * 0.010381362401148057;
+    colors[0] = texture(image, uv).rgb * 0.1964825501511404;
+	colors[1] = texture(image, uv + (off1 / resolution)).rgb * 0.2969069646728344;
+	colors[2] = texture(image, uv - (off1 / resolution)).rgb * 0.2969069646728344;
+	colors[3] = texture(image, uv + (off2 / resolution)).rgb * 0.09447039785044732;
+	colors[4] = texture(image, uv - (off2 / resolution)).rgb * 0.09447039785044732;
+	colors[5] = texture(image, uv + (off3 / resolution)).rgb * 0.010381362401148057;
+	colors[6] = texture(image, uv - (off3 / resolution)).rgb * 0.010381362401148057;
 	for(int i = 0; i < 7; i++){
 		if(colors[i] != vec3(0, 0, 0)){
 			color += colors[i];

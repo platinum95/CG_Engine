@@ -1,5 +1,6 @@
 #include "CG_Engine.h"
 #include "Common.h"
+#include <stdexcept>
 
 namespace GL_Engine{
 
@@ -9,13 +10,12 @@ namespace GL_Engine{
 
 
 	CG_Engine::~CG_Engine(){
-		
+
 	}
 	uint16_t CG_Engine::ViewportWidth = 0;
 	uint16_t CG_Engine::ViewportHeight = 0;
 
 	bool CG_Engine::CG_CreateWindow(Properties::GLFWproperties *_DisplayProperties){
-
 		if (!glfwInit()){
 			return false;
 		}
@@ -24,10 +24,11 @@ namespace GL_Engine{
 
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		_DisplayProperties->window = glfwCreateWindow(_DisplayProperties->width, _DisplayProperties->height,
-													 _DisplayProperties->title, _DisplayProperties->monitor, 
-													 _DisplayProperties->share); // Windowed
+													 _DisplayProperties->title, _DisplayProperties->monitor,
+													 _DisplayProperties->share);
 		if (!_DisplayProperties->window)
 			return false;
 
@@ -42,7 +43,7 @@ namespace GL_Engine{
 		return _GladProperties->success;
 	}
 
-	
+
 
 
 }

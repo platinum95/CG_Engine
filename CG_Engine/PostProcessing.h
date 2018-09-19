@@ -3,7 +3,7 @@
 #include "CG_Data.h"
 #include "Shader.h"
 #include <sstream>
-#include <glm\vec2.hpp>
+#include <glm/vec2.hpp>
 namespace GL_Engine {
 	class PostProcessing{
 	public:
@@ -39,7 +39,7 @@ namespace GL_Engine {
 
 		static float VertexPositions[12];
 		static float TextureCoordinates[8];
-		static unsigned int PostProcessing::Indices[6];
+		static unsigned int Indices[6];
 
 	};
 
