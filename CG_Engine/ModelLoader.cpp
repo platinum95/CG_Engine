@@ -50,7 +50,7 @@ namespace GL_Engine {
 			NormalIndex = (int) this->VBOs.size() - 1;
 		}
 		int i = 0;
-		while (i == 0) {//mesh->mTextureCoords[i]){
+		while (i == 0 && mesh->HasTextureCoords( i ) ) {//mesh->mTextureCoords[i]){
 			std::vector<float> texCoords;
 			texCoords.reserve(mesh->mNumVertices * sizeof(float) * 2);
 
@@ -278,6 +278,7 @@ namespace GL_Engine {
 			aiString str;
 			material->GetTexture(_Type, i, &str);
 			std::string std_str = std::string(str.C_Str());
+			std::replace(std_str.begin(), std_str.end(), '\\', '/');
 			if (std_str.size() == 0)
 				continue;
 			std_str = _PathBase + std_str;

@@ -60,7 +60,7 @@ void GL_Engine::KeyHandler::Update(GLFWwindow *window) {
 
 				if (!keyType->IsKeyDown && glfwGetKey(window, keyType->Key) == GLFW_PRESS) {
 					keyType->IsKeyDown = true;
-					*(keyType->Value) -= keyType->ByAmount;
+					*(keyType->Value) += keyType->ByAmount;
 				}
 				if (keyType->IsKeyDown && glfwGetKey(window, keyType->Key) == GLFW_RELEASE) {
 					keyType->IsKeyDown = false;

@@ -35,7 +35,7 @@ namespace GL_Engine {
 		CreateShader(_CubemapShader);
 	}
 	Cubemap::~Cubemap() {
-
+		
 	}
 
 	void Cubemap::GenerateCubemap(const std::vector<std::string> &_TextureFiles) {

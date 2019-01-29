@@ -127,21 +127,22 @@ namespace GL_Engine {
 
 
 	void Camera::GenerateViewMatrix() {
-		glm::quat qPitch = glm::angleAxis(glm::radians(RotationEuler.x), glm::vec3(1, 0, 0));
-		glm::quat qYaw = glm::angleAxis(glm::radians(RotationEuler.y), glm::vec3(0, 1, 0));
-		glm::quat qRoll = glm::angleAxis(glm::radians(RotationEuler.z), glm::vec3(0, 0, 1));
+		Orientation = glm::normalize( Orientation );
 
-		glm::quat Orientation = qPitch * qYaw * qRoll;
-		Orientation = glm::normalize(Orientation);
-		glm::mat4 R = glm::toMat4(Orientation);
-		glm::mat4 T = glm::mat4(1.0); //identity
+		// Get rotational component from quaternion oerientation
+		glm::mat4 R = glm::toMat4( Orientation );
+		
+		// Get translation component
+		glm::mat4  T = glm::translate( glm::mat4( 1.0 ), 
+									   glm::vec3( -CameraPosition ) );
 
-		T = glm::translate(T, glm::vec3(-CameraPosition));
-		this->ForwardVector =	glm::vec3(R * glm::vec4(0, 0, 1, 0));
-		this->UpVector =		glm::vec3(R * glm::vec4(0, 1, 0, 0));
-		this->RightVector =		glm::vec3(R * glm::vec4(1, 0, 0, 0));
+		// Reset orientation vectors based on rotation matrix
+		this->ForwardVector = glm::vec3( R * glm::vec4( 0, 0, 1, 0 ) );
+		this->UpVector = glm::vec3( R * glm::vec4( 0, 1, 0, 0 ) );
+		this->RightVector =	glm::vec3( R * glm::vec4( 1, 0, 0, 0 ) );
 
-		this->ViewMatrix = glm::inverse(R) * T;
+		// Construct view matrix from translation and rotation components
+		this->ViewMatrix = glm::inverse( R ) * T;
 		this->UpdateViewMatrix = false;
 	}
 
