@@ -62,6 +62,7 @@ namespace GL_Engine {
 	const glm::vec4 &Camera::SetCameraPosition(const glm::vec4 &_Position) {
 		this->CameraPosition = _Position;
 		this->ViewMatrix[3] = this->CameraPosition;
+        this->UpdateViewMatrix = true;
 		return this->CameraPosition;
 	}
 	const glm::vec4 &Camera::TranslateCamera(const glm::vec4 &_Translation) {
