@@ -4,6 +4,8 @@
 #include "Renderer.h"
 #include "File_IO.h"
 #include "Shader.h"
+#include "Camera.h"
+
 namespace GL_Engine {
 	class Cubemap{
 	public:
@@ -12,7 +14,9 @@ namespace GL_Engine {
 
 		void GenerateCubemap(const std::vector<std::string> &_TextureFiles);
 
-		const RenderPass *GetRenderPass() const;
+		const std::shared_ptr< RenderPass > GetRenderPass() const;
+
+		std::shared_ptr<CG_Data::Texture> getTextureMap();
 
 	private:
 		void CreateShader(Shader *_Shader);
@@ -20,7 +24,7 @@ namespace GL_Engine {
 		void SetupArrayObjects();
 
 		std::shared_ptr<CG_Data::Texture> MapTexture;
-		RenderPass* CubeRenderPass;
+		std::shared_ptr< RenderPass >  CubeRenderPass;
 		Shader *CubemapShader;
 		std::shared_ptr<CG_Data::VAO> CubemapVAO;
 
@@ -32,5 +36,42 @@ namespace GL_Engine {
 
 	};
 
+
+	class EnvironmentMap{
+	public:
+		EnvironmentMap( const glm::vec3 &centre, uint16_t fbSize );
+
+		~EnvironmentMap();
+		void cleanup();
+
+		void setStaticRenderer( std::shared_ptr< Renderer > _staticRenderer );
+		void setDynamicRenderer( std::shared_ptr< Renderer > _dynamicRenderer );
+
+		void renderStaticMap();
+		void renderDynamicMap();
+
+		std::shared_ptr< CG_Data::Texture > getStaticTexture();
+		std::shared_ptr< CG_Data::Texture > getDynamicTexture();
+
+		const std::shared_ptr< CG_Data::UBO > getCameraUbo() const;
+		const Camera & getCamera() const;
+
+	private:
+
+		std::shared_ptr< CG_Data::Texture > staticColourTex, staticDepthTex;
+		std::shared_ptr< CG_Data::Texture > dynamicColourTex, dynamicDepthTex;
+		std::unique_ptr< CG_Data::FBO > dynamicFbo;
+
+		uint16_t fbSize;
+
+		std::shared_ptr< Renderer > staticRenderer, dynamicRenderer;
+		Camera envCamera;
+
+
+
+
+	};
+
 }
+
 
