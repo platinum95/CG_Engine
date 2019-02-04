@@ -97,8 +97,8 @@ namespace GL_Engine {
 		ScreenVAO->AddVBO(std::move(IndexVBO));
 
 		ProcessingFBO = std::make_unique<CG_Data::FBO>(_Width, _Height);
-		auto FragColAttach = ProcessingFBO->AddAttachment(CG_Data::FBO::AttachmentType::TextureAttachment, _Width, _Height);
-		ProcessingFBO->AddAttachment(CG_Data::FBO::AttachmentType::DepthAttachment, _Width, _Height);
+		auto FragColAttach = ProcessingFBO->addAttachment(CG_Data::FBO::AttachmentType::TextureAttachment, _Width, _Height);
+		ProcessingFBO->addAttachment(CG_Data::FBO::AttachmentType::DepthAttachment, _Width, _Height);
 		this->OutputColourBuffer = std::static_pointer_cast<CG_Data::FBO::TexturebufferObject>(FragColAttach)->GetTexture();
 		OutputColourBuffer->SetUnit(GL_TEXTURE0);
 		FragmentShader.clear();
@@ -113,7 +113,7 @@ namespace GL_Engine {
 	}
 
 	void PostProcessing::Process() {
-		ProcessingFBO->Bind(0);
+		ProcessingFBO->bind(0);
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -130,7 +130,7 @@ namespace GL_Engine {
 		ScreenVAO->BindVAO();
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-		ProcessingFBO->Unbind();
+		ProcessingFBO->unbind();
 
 	}
 	const CG_Data::FBO *PostProcessing::GetFBO() const { 
