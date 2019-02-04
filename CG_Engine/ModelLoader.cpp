@@ -122,10 +122,10 @@ namespace GL_Engine {
     ModelAttribList ModelLoader::loadModel( const std::string &_modelPath,
                                             unsigned int _flags ){
         
-        auto filePath = std::filesystem::path( _modelPath );
+		auto filePath = std::filesystem::path(_modelPath);
         auto pathBase = filePath.parent_path();
         auto modelFile = filePath.filename();
-        const aiScene* _Scene = aImporter.ReadFile( filePath, _flags );
+        const aiScene* _Scene = aImporter.ReadFile( filePath.generic_string(), _flags );
         if ( !_Scene ) {
             throw std::runtime_error( "Error loading model " + \
                 _modelPath + "\n" + aImporter.GetErrorString() + "\n" );
@@ -137,7 +137,7 @@ namespace GL_Engine {
 
         for (unsigned int i = 0; i < _Scene->mNumMeshes; i++) {
             auto m = _Scene->mMeshes[i];
-            auto newAttrib = std::make_shared< ModelAttribute >( _Scene, i, pathBase.string() );
+            auto newAttrib = std::make_shared< ModelAttribute >( _Scene, i, pathBase.generic_string() );
             attributes.push_back( newAttrib );
         }
         aImporter.FreeScene();
@@ -205,7 +205,7 @@ namespace GL_Engine {
         auto pathBase = filePath.parent_path();
         auto modelFile = filePath.filename();
 
-        const aiScene* _Scene = aImporter.ReadFile( filePath, _flags);
+        const aiScene* _Scene = aImporter.ReadFile( filePath.generic_string(), _flags);
         if (!_Scene) {
             throw std::runtime_error("Error loading model " + _modelPath + "\n" + aImporter.GetErrorString() + "\n");
         }
@@ -222,7 +222,7 @@ namespace GL_Engine {
         for (unsigned int i = 0; i < _Scene->mNumMeshes; i++) {
             std::map<std::string, std::shared_ptr<MeshBone>> MeshBoneMap;
             auto mesh = _Scene->mMeshes[i];
-            std::shared_ptr<ModelAttribute> newAttrib = std::make_shared<ModelAttribute>( _Scene, i, pathBase );
+            std::shared_ptr<ModelAttribute> newAttrib = std::make_shared<ModelAttribute>( _Scene, i, pathBase.generic_string() );
             std::vector<VertexBoneData> WeightVBOData;
             WeightVBOData.resize(mesh->mNumVertices);
             for (unsigned int bi = 0; bi < mesh->mNumBones; bi++) {
@@ -314,13 +314,13 @@ namespace GL_Engine {
                 continue;
 
             auto texPath = std::filesystem::path( _PathBase ) / texRelPath;
-            if ( cachedTextures[ texPath ] ) {
-                _Textures.push_back( cachedTextures[ texPath ] );
+            if ( cachedTextures[ texPath.generic_string() ] ) {
+                _Textures.push_back( cachedTextures[ texPath.generic_string()] );
                 continue;
             }
-            const auto texture = loadTexture( texPath, GL_TEXTURE0 + (GLuint)_Textures.size());
+            const auto texture = loadTexture( texPath.generic_string(), GL_TEXTURE0 + (GLuint)_Textures.size());
             _Textures.push_back( texture );
-            cachedTextures[ texPath ] = std::move( texture );
+            cachedTextures[ texPath.generic_string()] = std::move( texture );
         }
         return _Textures;
     }
