@@ -111,6 +111,17 @@ namespace GL_Engine{
 			this->Unit = _Unit;
 			Initialised = true;
 		}
+
+		Texture::Texture( GLuint _Unit, GLenum _Target, GLint width, GLint height, std::function<void()> _Parameters ){
+			glGenTextures(1, &this->ID);
+			this->Target = _Target;
+			this->Unit = _Unit;
+			glActiveTexture(this->Unit);
+			glBindTexture(this->Target, this->ID);
+			_Parameters();
+			Initialised = true;
+		}
+
 		Texture::~Texture() {
 			if (Initialised) {
 				glDeleteTextures(1, &this->ID);
@@ -202,6 +213,11 @@ namespace GL_Engine{
 			this->Cleanup();
 		}
 
+		void UBO::setData( void * _data ){
+			this->Data = _data;
+			this->UpdateUBO();
+		}
+
 		void UBO::UpdateUBO() const {
 			glBindBuffer(GL_UNIFORM_BUFFER, this->ID);
 			GLvoid* UBO_Pointer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
@@ -215,17 +231,22 @@ namespace GL_Engine{
 #pragma endregion
 
 #pragma region FBO
-			FBO::RenderbufferObject::RenderbufferObject(uint16_t _Width, uint16_t _Height, GLenum _Type) {
-				glGenRenderbuffers(1, &this->ID);
-				glBindRenderbuffer(GL_RENDERBUFFER, this->ID);
-				glRenderbufferStorage(GL_RENDERBUFFER, _Type, _Width, _Height);
+			FBO::RenderbufferObject::RenderbufferObject( uint16_t _width, 
+													     uint16_t _height, 
+														 GLenum _type ) {
+				glGenRenderbuffers( 1, &this->ID );
+				glBindRenderbuffer( GL_RENDERBUFFER, this->ID );
+
+				glRenderbufferStorage( GL_RENDERBUFFER, _type, _width,
+									   _height);
 
 			}
-			void FBO::RenderbufferObject::Bind() const {
+
+			void FBO::RenderbufferObject::bind() const {
 
 			}
 
-			FBO::TexturebufferObject::TexturebufferObject(uint16_t _Width, uint16_t _Height, uint8_t _Unit) {
+			FBO::TexturebufferObject::TexturebufferObject( uint16_t _Width, uint16_t _Height, uint8_t _Unit ) {
 				auto parameters = []() {
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -233,7 +254,7 @@ namespace GL_Engine{
 				TextureObject = std::make_shared<Texture>(nullptr, _Width, _Height, GL_TEXTURE0 + _Unit, GL_RGB, parameters, GL_TEXTURE_2D);
 				this->ID = TextureObject->GetID();
 			}
-			void FBO::TexturebufferObject::TexturebufferObject::Bind() const {
+			void FBO::TexturebufferObject::TexturebufferObject::bind() const {
 
 			}
 			const std::shared_ptr<Texture> FBO::TexturebufferObject::GetTexture() const { 
@@ -243,42 +264,42 @@ namespace GL_Engine{
 	
 			FBO::FBO(uint16_t _Width, uint16_t _Height) {
 				glGenFramebuffers(1, &this->ID);
-				this->Width = _Width;
-				this->Height = _Height;
-				Initialised = true;
+				this->width = _Width;
+				this->height = _Height;
+				initialised = true;
 			}
 			FBO::~FBO() {
-				if (Initialised) {
-					this->Cleanup();
-					Initialised = false;
+				if (initialised) {
+					this->cleanup();
+					initialised = false;
 				}
 			}
-			void FBO::Cleanup() {
-				if (Initialised) {
+			void FBO::cleanup() {
+				if (initialised) {
 					glDeleteFramebuffers(1, &this->ID);
-					Initialised = false;
+					initialised = false;
 				}
 			}
-			std::shared_ptr<FBO::AttachmentBufferObject> FBO::AddAttachment(AttachmentType _Attachment, uint16_t _Width, uint16_t _Height) {
+			std::shared_ptr<FBO::AttachmentBufferObject> FBO::addAttachment(AttachmentType _Attachment, uint16_t _Width, uint16_t _Height) {
 				glBindFramebuffer(GL_FRAMEBUFFER, this->ID);
 				glDrawBuffer(GL_COLOR_ATTACHMENT0);
 				switch (_Attachment) {
 				case TextureAttachment: {
-					std::shared_ptr<TexturebufferObject> TexObj = std::make_shared<TexturebufferObject>(_Width, _Height, TextureAttachmentCount);
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + TextureAttachmentCount++, GL_TEXTURE_2D, TexObj->ID, 0);
-					this->Attachments.push_back(std::move(TexObj));
+					std::shared_ptr<TexturebufferObject> TexObj = std::make_shared<TexturebufferObject>(_Width, _Height, textureAttachmentCount);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + textureAttachmentCount++, GL_TEXTURE_2D, TexObj->ID, 0);
+					this->attachments.push_back(std::move(TexObj));
 					break;
 				}
 				case StencilAttachment: {
 					std::shared_ptr<RenderbufferObject> rbo = std::make_shared<RenderbufferObject>(_Width, _Height, GL_STENCIL_INDEX8);
 					glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo->ID);
-					this->Attachments.push_back(std::move(rbo));
+					this->attachments.push_back(std::move(rbo));
 					break;
 				}
 				case DepthAttachment: {
 					std::shared_ptr<RenderbufferObject> rbo = std::make_shared<RenderbufferObject>(_Width, _Height, GL_DEPTH_COMPONENT32);
 					glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo->ID);
-					this->Attachments.push_back(std::move(rbo));
+					this->attachments.push_back(std::move(rbo));
 					break;
 				}
 				}
@@ -286,11 +307,11 @@ namespace GL_Engine{
 					this->complete = true;
 				}
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				std::shared_ptr<AttachmentBufferObject> abo = Attachments.back();
+				std::shared_ptr<AttachmentBufferObject> abo = attachments.back();
 				return abo;
 
 			}
-			void FBO::Bind(uint8_t _ColourAttachment) const {
+			void FBO::bind(uint8_t _ColourAttachment) const {
 				if (!this->complete)
 					throw std::runtime_error("Attempting to bind incomplete framebuffer!\n");
 				glBindTexture(GL_TEXTURE_2D, 0);
@@ -298,10 +319,10 @@ namespace GL_Engine{
 				glDrawBuffer(GL_COLOR_ATTACHMENT0 + _ColourAttachment);
 				glClearColor(0.0, 0.0, 0.0, 1.0);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-				glViewport(0, 0, Width, Height);
+				glViewport(0, 0, this->width, this->height);
 			}
 
-			void FBO::Bind(uint16_t _Count, const GLenum* _ColourAttachments) const {
+			void FBO::bind(uint16_t _Count, const GLenum* _ColourAttachments) const {
 				if (!this->complete)
 					throw std::runtime_error("Attempting to bind incomplete framebuffer!\n");
 				glBindTexture(GL_TEXTURE_2D, 0);
@@ -312,12 +333,12 @@ namespace GL_Engine{
 					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				}
 				glDrawBuffers(_Count, _ColourAttachments);
-				glViewport(0, 0, Width, Height);
+				glViewport(0, 0, this->width, this->height);
 			}
-			const GLuint FBO::GetID() const {
+			const GLuint FBO::getID() const {
 				return this->ID;
 			}
-			void FBO::Unbind() const {
+			void FBO::unbind() const {
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				glViewport(0, 0, CG_Engine::ViewportWidth, CG_Engine::ViewportHeight);
 			}

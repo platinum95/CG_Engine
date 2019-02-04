@@ -171,7 +171,7 @@ namespace GL_Engine {
 	public:
 		ModelAttribute();
 		~ModelAttribute();
-		ModelAttribute(const aiScene *_Scene, unsigned int index, std::string &_PathBase);
+		ModelAttribute( const aiScene *_Scene, unsigned int index, const std::string &_PathBase );
 
 		CG_Data::VBO* GetVBO(int index);
 		int MeshIndex, NormalIndex, TexCoordIndex, IndicesIndex;

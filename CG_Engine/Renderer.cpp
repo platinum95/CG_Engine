@@ -3,7 +3,7 @@
 using namespace GL_Engine;
 
 Renderer::Renderer() {
-	this->renderPasses = std::vector<std::unique_ptr<RenderPass>>();
+	this->renderPasses = std::vector<std::shared_ptr<RenderPass>>();
 }
 
 
@@ -17,32 +17,35 @@ void Cleanup() {
 
 }
 
-RenderPass * GL_Engine::Renderer::AddRenderPass(Shader* _Shader) {
+std::shared_ptr<RenderPass> GL_Engine::Renderer::AddRenderPass( Shader* _Shader ) {
 	
-	auto rPass =  std::make_unique<RenderPass>() ;
+	auto rPass =  std::make_shared<RenderPass>() ;
 	rPass->renderFunction = DefaultRenderer;
 	rPass->Data = nullptr;
 	rPass->shader = _Shader;
 	auto passOut = rPass.get();
-	this->renderPasses.push_back(std::move(rPass));
-	return passOut;	
+	this->renderPasses.push_back( rPass );
+	return std::move( rPass );	
 }
 
-RenderPass* GL_Engine::Renderer::AddRenderPass(std::unique_ptr<RenderPass> _RPass) {
+void GL_Engine::Renderer::AddRenderPass(std::shared_ptr<RenderPass> _RPass) {
 	auto passOut = _RPass.get();
-	this->renderPasses.push_back(std::move(_RPass));
-	return passOut;
+	this->renderPasses.push_back( std::move( _RPass ) );
+	return;
 }
 
-RenderPass * GL_Engine::Renderer::AddRenderPass(Shader* _Shader, std::function<void(RenderPass&, void*)> _RenderFunction, void * _Data) {
-	auto rPass = std::make_unique<RenderPass>();
+std::shared_ptr<RenderPass> GL_Engine::Renderer::AddRenderPass(Shader* _Shader, std::function<void(RenderPass&, void*)> _RenderFunction, void * _Data) {
+	auto rPass = std::make_shared<RenderPass>();
 	rPass->renderFunction = _RenderFunction;
 	rPass->Data = _Data;
 	rPass->shader = _Shader;
 	auto passOut = rPass.get();
-	this->renderPasses.push_back(std::move(rPass));
-	return passOut;
-	
+	this->renderPasses.push_back( rPass );
+	return std::move( rPass );
+}
+
+const std::vector< std::shared_ptr< RenderPass > > & GL_Engine::Renderer::getRenderPasses() const{
+	return this->renderPasses;
 }
 
 void GL_Engine::Renderer::Render() const {

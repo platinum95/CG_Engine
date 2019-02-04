@@ -9,141 +9,284 @@
 
 namespace GL_Engine {
 
-	Camera::Camera() {
-		Orientation = glm::quatLookAt(glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
-		GenerateViewMatrix();
+    Camera::Camera() {
+        // Initialise the camera (look forward)
+        orientation = glm::quatLookAt( glm::vec3( 0, 0, 1 ), 
+                                       glm::vec3( 0, 1, 0 ) );
+        this->cameraPosition = glm::vec3( 0, 0, 0 );
+        generateViewMatrix();
+
+    }
+
+    void Camera::initialise(){
+        // Create the data UBO
+        this->cameraUbo = std::make_shared< CG_Data::UBO >( 
+                            ( void * ) & this->cameraUboData, 
+                            sizeof( this->cameraUboData ) );
+        this->updateViewMatrix = true;
+        this->update();
+    }
+
+
+    Camera::~Camera() {
+        this->cameraUbo.reset();
+    }
+
+    const glm::mat4 & Camera::setProjectionMatrix( float _nearPlane,
+                                                   float _farPlane,
+                                                   float _fov,
+                                                   float _aspectRatio ){
+        // Construct the projection matrix using GLM
+        float fov_radians = glm::radians(_fov);
+        this->projectionMatrix = glm::perspective( fov_radians,
+                                                   _aspectRatio,
+                                                   _nearPlane,
+                                                   _farPlane );
+
+        // Copy the project matrix into the UBO struct
+        memcpy( this->cameraUboData.projectionMatrix,
+                glm::value_ptr( this->projectionMatrix ),
+                sizeof( float ) * 16 );
+
+        // Need to re-set the PV matrix too
+        this->updateViewMatrix = true;
+        return this->projectionMatrix;
+    }
+
+    void Camera::setProjectionMatrix( const glm::mat4 &_projection ) {
+        this->projectionMatrix = _projection;
+
+        // Copy the project matrix into the UBO struct
+        memcpy( this->cameraUboData.projectionMatrix,
+                glm::value_ptr( this->projectionMatrix ),
+                sizeof( float ) * 16 );
+
+        // Need to re-set the PV matrix too
+        this->updateViewMatrix = true;
+    }
+    glm::quat RotationBetweenVectors( glm::vec3 start, glm::vec3 dest ){
+    start = glm::normalize(start);
+	dest = glm::normalize(dest);
+
+	float cosTheta = dot(start, dest);
+	glm::vec3 rotationAxis;
+
+	if (cosTheta < -1 + 0.001f){
+		// special case when vectors in opposite directions:
+		// there is no "ideal" rotation axis
+		// So guess one; any will do as long as it's perpendicular to start
+		rotationAxis = glm::cross(glm::vec3(0.0f, 0.0f, 1.0f), start);
+
+		if (glm::length2(rotationAxis) < 0.01 ) // bad luck, they were parallel, try again!
+			rotationAxis = glm::cross( glm::vec3(1.0f, 0.0f, 0.0f), start );
+
+		rotationAxis = normalize(rotationAxis);
+		return glm::angleAxis(glm::radians(180.0f), rotationAxis);
 	}
 
+	rotationAxis = cross(start, dest);
 
-	Camera::~Camera() {
-	}
+	float s = sqrt( (1+cosTheta)*2 );
+	float invs = 1 / s;
 
-	const glm::mat4 &Camera::SetProjectionMatrix(float _NearPlane, float _FarPlane, float _FOV, float _AspectRatio) {
-		float fov_radians = glm::radians(_FOV);
-		float range = tan(fov_radians / 2.0f) * _NearPlane;
-		float Sx = _NearPlane / (range * _AspectRatio);
-		float Sy = _NearPlane / range;
-		float Sz = -(_FarPlane + _NearPlane) / (_FarPlane - _NearPlane);
-		float Pz = -(2 * _FarPlane * _NearPlane) / (_FarPlane * _NearPlane);
-		float ConstructMatrix[] = {
-			Sx, 0, 0, 0,
-			0, Sy, 0, 0,
-			0, 0, Sz, -1,
-			0, 0, Pz, 0
-		};
-		this->ProjectionMatrix = glm::perspective(fov_radians, _AspectRatio, _NearPlane, _FarPlane);// glm::make_mat4(ConstructMatrix);
-		return this->ProjectionMatrix;
-	}
-	void Camera::SetProjectionMatrix(glm::mat4 &_Projection) {
-		this->ProjectionMatrix = _Projection;
-	}
+	return glm::quat(
+		s * 0.5f, 
+		rotationAxis.x * invs,
+		rotationAxis.y * invs,
+		rotationAxis.z * invs
+	);
+    }
 
-	void Camera::ReflectCamera() {
-		static Camera backup;
-		static bool reflected = false;
-		if (reflected == false) {
-			backup = *this;
-			this->CameraPosition.y *= -1.0;
-			//float planeAngle = asin(ForwardVector.y / glm::length(ForwardVector));
-			//volatile glm::quat test = glm::quat(ForwardVector);
+    void Camera::reflectCamera() {
+        static Camera backup;
+        static bool reflected = false;
+        if (reflected == false) {
+            backup = *this;
+            this->cameraPosition.y *= -1.0;
+            glm::vec3 newForward = glm::reflect( this->forwardVector, glm::vec3( 0, 1, 0 ) );
+            glm::quat rot = RotationBetweenVectors( this->forwardVector, newForward );
+            this->orientation = rot * orientation;
+            this->rotationEuler.x = -this->rotationEuler.x;
+            reflected = true;
+            this->updateViewMatrix = true;
+            this->update();
+            //this->generateViewMatrix();
+        }
+        else {
+            reflected = false;
+            *this = backup;
+        }
+    }
+    void Camera::setCameraPosition( const glm::vec3 &_position ) {
+        this->cameraPosition = _position;
+        this->viewMatrix[3] = glm::vec4( this->cameraPosition, 1.0 );
+        this->updateViewMatrix = true;
+        return;
+    }
 
-			//planeAngle *= -1.0;
-			//std::cout << ForwardVector.x << " " << ForwardVector.y << " " << ForwardVector.z << std::endl;
-			//this->PitchBy(-2.0f * glm::degrees(planeAngle));
-			this->RotationEuler.x = -this->RotationEuler.x;
-			reflected = true;
-			this->GenerateViewMatrix();
-		}
-		else {
-			reflected = false;
-			*this = backup;
-		}
-	}
-	const glm::vec4 &Camera::SetCameraPosition(const glm::vec4 &_Position) {
-		this->CameraPosition = _Position;
-		this->ViewMatrix[3] = this->CameraPosition;
-        this->UpdateViewMatrix = true;
-		return this->CameraPosition;
-	}
-	const glm::vec4 &Camera::TranslateCamera(const glm::vec4 &_Translation) {
-		this->CameraPosition += glm::vec4(this->ForwardVector, 0.0) * _Translation.z;
-		this->CameraPosition += glm::vec4(this->RightVector, 0.0) * _Translation.x;
-		this->CameraPosition += glm::vec4(this->UpVector, 0.0) * _Translation.y;
-		this->UpdateViewMatrix = true;
-		return this->CameraPosition;
-	}
+    const glm::vec3 & 
+    Camera::translateCamera( const glm::vec3 &_translation ) {
+        this->cameraPosition += this->forwardVector * _translation.z;
+        this->cameraPosition += this->rightVector * _translation.x;
+        this->cameraPosition += this->upVector * _translation.y;
+        this->updateViewMatrix = true;
+        return this->cameraPosition;
+    }
 
-	void Camera::PitchBy(float _Pitch) {
-		this->RotationEuler.x += _Pitch;
-		float Radians = glm::radians(_Pitch);
-		glm::quat Versor = glm::angleAxis(Radians, this->RightVector);
+    void Camera::pitchBy( float _pitch ) {
+        this->rotationEuler.x += _pitch;
+        float radians = glm::radians( _pitch );
+        glm::quat versor = glm::angleAxis( radians, this->rightVector );
 
-		Orientation = Versor * Orientation;
-		this->ForwardVector = glm::rotate(Versor, this->ForwardVector);
-		this->UpVector = glm::rotate(Versor, this->UpVector);
-		this->UpdateViewMatrix = true;
-	}
-	void Camera::RollBy(float _Roll) {
-		this->RotationEuler.z += _Roll;
-		float Radians = glm::radians(_Roll);
-		glm::quat Versor = glm::angleAxis(Radians, this->ForwardVector);
+        orientation = versor * orientation;
+        this->forwardVector = glm::rotate(versor, this->forwardVector);
+        this->upVector = glm::rotate(versor, this->upVector);
+        this->updateViewMatrix = true;
+    }
 
-		Orientation = Versor * Orientation;
-		this->RightVector = glm::rotate(Versor, this->RightVector);
-		this->UpVector = glm::rotate(Versor, this->UpVector);
-		this->UpdateViewMatrix = true;
-	}
-	void Camera::YawBy(float _Yaw) {
-		this->RotationEuler.y += _Yaw;
-		float Radians = glm::radians(_Yaw);
-		glm::quat Versor = glm::angleAxis(Radians, this->UpVector);
+    void Camera::rollBy( float _roll ) {
+        this->rotationEuler.z += _roll;
+        float Radians = glm::radians( _roll );
+        glm::quat versor = glm::angleAxis( Radians, this->forwardVector );
 
-		Orientation = Versor * Orientation;
-		this->ForwardVector = glm::rotate(Versor, this->ForwardVector);
-		this->RightVector = glm::rotate(Versor, this->RightVector);
-		this->UpdateViewMatrix = true;
-	}
+        orientation = versor * orientation;
+        this->rightVector = glm::rotate( versor, this->rightVector );
+        this->upVector = glm::rotate( versor, this->upVector );
+        this->updateViewMatrix = true;
+    }
 
-	const glm::mat4 &Camera::GetViewMatrix() {
-		if (UpdateViewMatrix)
-			GenerateViewMatrix();
-		return this->ViewMatrix;
-	}
-	const glm::mat4 &Camera::GetProjectionMatrix() const {
-		return this->ProjectionMatrix;
-	}
-	const glm::vec4 &Camera::GetCameraPosition() const {
-		return this->CameraPosition;
-	}
+    void Camera::yawBy( float _yaw ) {
+        this->rotationEuler.y += _yaw;
+        float Radians = glm::radians( _yaw );
+        glm::quat versor = glm::angleAxis( Radians, this->upVector );
 
-	const glm::vec3 &Camera::GetForwardVector() const {
-		return this->ForwardVector;
-	}
+        orientation = versor * orientation;
+        this->forwardVector = glm::rotate( versor, this->forwardVector );
+        this->rightVector = glm::rotate( versor, this->rightVector );
+        this->updateViewMatrix = true;
+    }
 
-	const glm::quat &Camera::GetOrientation() const {
-		return this->Orientation;
-	}
+    void Camera::environDirect( GLuint direction ){
+        switch( direction ){
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_X: {
+                orientation = glm::quatLookAt( glm::vec3( 1, 0, 0 ),
+                                               glm::vec3( 0, -1, 0 ) );
+                break;
+            }
+            
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X: {
+                orientation = glm::quatLookAt( glm::vec3( -1, 0, 0 ),
+                                               glm::vec3( 0, -1, 0 ) );
+                break;
+            }
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y: {
+                orientation = glm::quatLookAt( glm::vec3( 0, 1, 0 ),
+                                               glm::vec3( 0, 0, 1 ) );
+                break;
+            }
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y: {
+                orientation = glm::quatLookAt( glm::vec3( 0, -1, 0 ),
+                                               glm::vec3( 0, 0, -1 ) );
+                break;
+            }
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: {
+                orientation = glm::quatLookAt( glm::vec3( 0, 0, 1 ),
+                                               glm::vec3( 0, -1, 0 ) );
+                break;
+            }
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z: {
+                orientation = glm::quatLookAt( glm::vec3( 0, 0, -1 ),
+                                               glm::vec3( 0, -1, 0 ) );
+                break;
+            }
+        }
+        this->updateViewMatrix = true;
+    }
+
+
+    const std::shared_ptr< CG_Data::UBO > Camera::update( bool force ){
+        // No need to continue if the camera hasn't moved
+        if( updateViewMatrix || force ){
+            generateViewMatrix();
+            auto vMatrix = this->viewMatrix;
+            auto & uboData = this->cameraUboData;
+            
+            // Copy over the view matrix
+            memcpy( uboData.viewMatrix, glm::value_ptr( vMatrix ),
+                    sizeof( float ) * 16 );
+
+            // Copy over the PV matrix
+            memcpy( uboData.pvMatrix, glm::value_ptr( this->pvMatrix ),
+                    sizeof( float ) * 16 );
+            
+            // Copy over the camera orientation
+            memcpy( uboData.cameraOrientation,
+                    glm::value_ptr( glm::vec4( this->forwardVector, 0.0 ) ),
+                    sizeof( float ) * 4 );
+            
+            // Finally, copy over the camera position
+            memcpy( uboData.cameraPosition,
+                    glm::value_ptr( glm::vec4( this->cameraPosition, 1.0 ) ),
+                    sizeof(float) * 4);
+        }
+
+        return this->cameraUbo;
+    }
+
+    const std::shared_ptr< CG_Data::UBO > Camera::getCameraUbo() const{
+        return this->cameraUbo;
+    }
+
+    const CameraUboData * Camera::getCameraUboData() const {
+        return & this->cameraUboData;
+    }
+
+    const glm::mat4 & Camera::getViewMatrix() {
+        if (updateViewMatrix){
+            generateViewMatrix();
+        }
+        return this->viewMatrix;
+    }
+
+    const glm::mat4 & Camera::getProjectionMatrix() const {
+        return this->projectionMatrix;
+    }
+
+    const glm::vec3 & Camera::getCameraPosition() const {
+        return this->cameraPosition;
+    }
+
+    const glm::vec3 & Camera::getForwardVector() const {
+        return this->forwardVector;
+    }
+
+    const glm::quat & Camera::getOrientation() const {
+        return this->orientation;
+    }
 
 
 
-	void Camera::GenerateViewMatrix() {
-		Orientation = glm::normalize( Orientation );
+    void Camera::generateViewMatrix() {
+        orientation = glm::normalize( orientation );
 
-		// Get rotational component from quaternion oerientation
-		glm::mat4 R = glm::toMat4( Orientation );
-		
-		// Get translation component
-		glm::mat4  T = glm::translate( glm::mat4( 1.0 ), 
-									   glm::vec3( -CameraPosition ) );
+        // Get rotational component from quaternion oerientation
+        glm::mat4 R = glm::toMat4( orientation );
+        
+        // Get translation component
+        glm::mat4  T = glm::translate( glm::mat4( 1.0 ), 
+                                       glm::vec3( -cameraPosition ) );
 
-		// Reset orientation vectors based on rotation matrix
-		this->ForwardVector = glm::vec3( R * glm::vec4( 0, 0, 1, 0 ) );
-		this->UpVector = glm::vec3( R * glm::vec4( 0, 1, 0, 0 ) );
-		this->RightVector =	glm::vec3( R * glm::vec4( 1, 0, 0, 0 ) );
+        // Reset orientation vectors based on rotation matrix
+        this->forwardVector = glm::vec3( R * glm::vec4( 0, 0, 1, 0 ) );
+        this->upVector = glm::vec3( R * glm::vec4( 0, 1, 0, 0 ) );
+        this->rightVector =	glm::vec3( R * glm::vec4( 1, 0, 0, 0 ) );
 
-		// Construct view matrix from translation and rotation components
-		this->ViewMatrix = glm::inverse( R ) * T;
-		this->UpdateViewMatrix = false;
-	}
+        // Construct view matrix from translation and rotation components
+        this->viewMatrix = glm::inverse( R ) * T;
+        this->updateViewMatrix = false;
+
+        // Generate PV matrix
+        this->pvMatrix = this->projectionMatrix * this->viewMatrix;
+    }
 
 }

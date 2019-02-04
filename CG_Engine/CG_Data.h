@@ -80,7 +80,8 @@ namespace GL_Engine{
 		class Texture{
 		public:
 			Texture(void* _Data, GLint width, GLint height, GLuint _Unit, GLuint _ImageFormat, std::function<void()> _Parameters, GLenum _Target = GL_TEXTURE_2D);
-			Texture(GLuint _Unit, GLenum _Target);
+			Texture( GLuint _Unit, GLenum _Target );
+			Texture( GLuint _Unit, GLenum _Target, GLint width, GLint height, std::function<void()> _Parameters );
 			~Texture();
 			void Cleanup();
 
@@ -135,7 +136,8 @@ namespace GL_Engine{
 			UBO(void* _Data, size_t _DataSize);
 			~UBO();
 			void UpdateUBO() const;
-			const GLuint GetBindingPost()const;
+			const GLuint GetBindingPost() const;
+			void setData( void * _data );
 		private:
 			bool Initialised{ false };
 			void* Data;
@@ -154,49 +156,58 @@ namespace GL_Engine{
 			class AttachmentBufferObject {
 			public:
 				GLuint ID;
-				virtual void Bind() const = 0;
+				virtual void bind() const = 0;
 			};
 
 			class RenderbufferObject : public AttachmentBufferObject {
 			public:
-				RenderbufferObject(uint16_t _Width, uint16_t _Height, GLenum _Type);
-				void Bind() const;
+				RenderbufferObject( uint16_t _Width, uint16_t _Height,
+									GLenum _Type );
+				void bind() const;
 			};
 
 			class TexturebufferObject : public AttachmentBufferObject {
 			public:
-				TexturebufferObject(uint16_t _Width, uint16_t _Height, uint8_t _Unit);
-				void Bind() const;
-				const std::shared_ptr<Texture> GetTexture() const;
+				TexturebufferObject( uint16_t _Width, uint16_t _Height,
+									 uint8_t _Unit );
+				void bind() const;
+				const std::shared_ptr< Texture > GetTexture() const;
+
 			private:
-				std::shared_ptr<Texture> TextureObject;
+				std::shared_ptr< Texture > TextureObject;
 			};
 
 			enum AttachmentType {
 				TextureAttachment, StencilAttachment, DepthAttachment
 			};
 
-			FBO(uint16_t _Width, uint16_t _Height);
+			FBO( uint16_t _width, uint16_t _height );
 			~FBO();
-			void Cleanup();
-			std::shared_ptr<AttachmentBufferObject> AddAttachment(AttachmentType _Attachment, uint16_t _Width, uint16_t _Height);
-			void Bind(uint8_t _ColourAttachment = 0) const;
+			void cleanup();
+			
+			std::shared_ptr< AttachmentBufferObject > 
+				addAttachment( AttachmentType _attachment, uint16_t _width,
+							   uint16_t _height );
+			
+			void bind( uint8_t _colourAttachment = 0 ) const;
 
-			void Bind(uint16_t _Count, const GLenum* _ColourAttachments) const;
-			const GLuint GetID() const;
-			void Unbind() const;
+			void bind( uint16_t _count, 
+					   const GLenum * _colourAttachments ) const;
+			
+			const GLuint getID() const;
+			void unbind() const;
 
 		private:
-			uint16_t Width, Height;
+			uint16_t width, height;
 			
 
 		protected:
 			GLuint ID;
 			
 		private:
-			bool Initialised{ false }, complete{ false };
-			uint8_t TextureAttachmentCount{ 0 };	
-			std::vector<std::shared_ptr<AttachmentBufferObject>> Attachments;
+			bool initialised{ false }, complete{ false };
+			uint8_t textureAttachmentCount{ 0 };	
+			std::vector< std::shared_ptr< AttachmentBufferObject > > attachments;
 		};
 		
 	}

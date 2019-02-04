@@ -3,51 +3,101 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glad/glad.h>
+#include <memory>
+#include "CG_Data.h"
 
 namespace GL_Engine {
 
-	struct CameraUBO_Data {
-		float ViewMatrix[16];
-		float ProjectionMatrix[16];
-		float PV_Matrix[16];
-		float CameraPosition[4];
-		float CameraOrientation[4];
-		float ClippingPlane[4];
-	};
+    struct CameraUboData {
+        float viewMatrix[16];
+        float projectionMatrix[16];
+        float pvMatrix[16];
+        float cameraPosition[4];
+        float cameraOrientation[4];
+        float clippingPlane[4];
+    };
 
-	class Camera {
-	public:
-		Camera();
-		~Camera();
+    class Camera {
+    public:
+        Camera();
+        ~Camera();
 
-		const glm::mat4 &SetProjectionMatrix(float _NearPlane, float _FarPlane, float _FOV, float _AspectRatio);
-		void			 SetProjectionMatrix(glm::mat4 &_Projection);
-		const glm::vec4 &SetCameraPosition(const glm::vec4 &_Position);
-		const glm::vec4 &TranslateCamera(const glm::vec4 &_Translation);
+        // Initialise the gl components of the camera (MUST BE CALLED)
+        void initialise();
 
-		const glm::mat4 &GetViewMatrix();
-		const glm::mat4 &GetProjectionMatrix() const;
-		const glm::vec4 &GetCameraPosition() const;
-		const glm::quat &GetOrientation() const;
+        // Create a new projection matrix based on the given parameters
+        const glm::mat4 & setProjectionMatrix( float _nearPlane, 
+                                               float _farPlane, 
+                                               float _fov, 
+                                               float _aspectRatio );
 
-		void ReflectCamera();
-		
-		const glm::vec3 &GetForwardVector() const;
-		
-		void PitchBy(float _Pitch);
-		void RollBy(float _Roll);
-		void YawBy(float _Yaw);
+        // Set the camera's projection matrix to the given matrix
+        void setProjectionMatrix( const glm::mat4 &_projection );
 
-	private:
-		void GenerateViewMatrix();
-		glm::mat4 ViewMatrix, ProjectionMatrix;
-		glm::vec4 CameraPosition{ 0, 0, 0, 1 };
-		glm::quat Orientation; 
-		glm::vec3 ForwardVector{ 0.0f, 0.0f, 1.0f }, RightVector{ 1.0f, 0.0f, 0.0f }, UpVector{ 0.0f, 1.0f, 0.0f };
-		glm::vec3 RotationEuler{ 0.0f, 0.0f, 0.0f };
+        // Move the camera tot he given position
+        void setCameraPosition( const glm::vec3 &_position );
 
-		bool UpdateViewMatrix{ true };
+        // Move the camera by the given vector
+        const glm::vec3 & translateCamera( const glm::vec3 &_Translation );
 
-	};
+        // Update the internal structures, return the given camera data
+        const std::shared_ptr< CG_Data::UBO > update( bool force=false );
+
+        // Get the camera UBO
+        const std::shared_ptr< CG_Data::UBO > getCameraUbo() const;
+
+        // Get the camera UBO data
+        const CameraUboData * getCameraUboData() const;
+
+        // Get the current view matrix        
+        const glm::mat4 & getViewMatrix();
+
+        // Get the current projection matrix
+        const glm::mat4 & getProjectionMatrix() const;
+
+        // Get the current position of the camera
+        const glm::vec3 & getCameraPosition() const;
+
+        // Get the current forward direction of the camera
+        const glm::vec3 & getForwardVector() const;
+
+        // Get the current quaternion orientation of the camera
+        const glm::quat & getOrientation() const;
+
+        // Reflect the camera about the 0-horizontal plane
+        void reflectCamera();
+    
+        // Pitch the camera (about right-vector) by a given number of degrees
+        void pitchBy( float _pitchDegrees );
+
+        // Roll the camera (about forward-vector) by a given number of degrees
+        void rollBy( float _rollDegrees );
+
+        // Yaw the camera (about up-vector) by a given number of degrees
+        void yawBy( float _yawDegrees );
+
+        // Direct the camera to look in a given orientation for 
+        // environment mapping
+        void environDirect( GLuint direction );
+
+    private:
+        void generateViewMatrix();
+        glm::mat4 viewMatrix, projectionMatrix, pvMatrix;
+        glm::vec3 cameraPosition{ 0, 0, 0 };
+        glm::quat orientation; 
+        glm::vec3 forwardVector{ 0.0f, 0.0f, 1.0f }, rightVector{ 1.0f, 0.0f, 0.0f }, upVector{ 0.0f, 1.0f, 0.0f };
+        glm::vec3 rotationEuler{ 0.0f, 0.0f, 0.0f };
+
+        CameraUboData cameraUboData;
+
+        std::shared_ptr< CG_Data::UBO > cameraUbo;
+
+        bool updateViewMatrix{ true };
+        bool updateProjMatrix{ true };
+
+
+
+    };
 }
 
