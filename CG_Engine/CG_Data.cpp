@@ -191,7 +191,8 @@ namespace GL_Engine{
 				return;
 			UpdateCallback(*this);
 		}
-		void Uniform::SetUpdateCallback(std::function<void(const CG_Data::Uniform &u)> _callback){
+		void Uniform::SetUpdateCallback( 
+			std::function< void( const CG_Data::Uniform &u )> _callback ){
 			this->UpdateCallback = _callback;
 			this->Initialised = true;
 		}

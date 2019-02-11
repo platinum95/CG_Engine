@@ -27,25 +27,31 @@ namespace GL_Engine{
 	}
 
 
-	const char* File_IO::LoadTextFile(const char* _FilePath, uint8_t *result){
-		if (_FilePath == "" || _FilePath == nullptr){
+	std::string File_IO::loadTextFile( const std::string & _filePath,
+									   uint8_t * result ){
+		if ( _filePath == "" || _filePath.empty() ){
 			*result = 1;
-			return nullptr;
+			return std::string( "" );
 		}
-		std::ifstream FileStream(_FilePath, std::ios::in | std::ios::binary);
-		if (!FileStream){
+		std::ifstream fileStream( _filePath, std::ios::in | std::ios::binary );
+		if ( !fileStream ){
 			*result = 2;
-			return nullptr;
+			return std::string( "" );
 		}
-		std::string *FileStr = new std::string();
-		FileStream.seekg(0, std::ios::end);	//Jump to end of file stream
-		FileStr->resize(FileStream.tellg());	//Get stream size and resize string accordingly
-		FileStream.seekg(0, std::ios::beg);
-		FileStream.read(&(*FileStr)[0], FileStr->size());
-		FileStream.close();
+		std::string fileStr;
+		fileStream.seekg( 0, std::ios::end );
+		// Get stream size and resize string memory accordingly
+		fileStr.reserve( fileStream.tellg() );
+		fileStream.seekg( 0, std::ios::beg );
+
+		// Read file into string with stream iterators
+		fileStr.assign( std::istreambuf_iterator<char>( fileStream ),
+					    std::istreambuf_iterator<char>() );
+
+		fileStream.close();
 
 		*result = 0;
-		return(FileStr->c_str());	//Return a const char array rather than std string
+		return fileStr;
 	}
 
 	void File_IO::FreeImageData(void* _Data){

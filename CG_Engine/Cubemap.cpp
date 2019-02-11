@@ -72,19 +72,24 @@ namespace GL_Engine {
         CubeRenderPass->BatchVao = CubemapVAO;
         CubeRenderPass->Textures.push_back(MapTexture);
     }
+    
     void Cubemap::SetupArrayObjects() {
         CubemapVAO = std::make_shared<CG_Data::VAO>();
         CubemapVAO->BindVAO();
-        std::unique_ptr<CG_Data::VBO> indexVBO = std::make_unique<CG_Data::VBO>((void*)&indices[0], 36 * sizeof(unsigned int), GL_STATIC_DRAW, GL_ELEMENT_ARRAY_BUFFER);
-        CubemapVAO->AddVBO(std::move(indexVBO));
-        std::unique_ptr<CG_Data::VBO> meshVBO = std::make_unique<CG_Data::VBO>((void*)&vertices[0], 24 * sizeof(float), GL_STATIC_DRAW);
+     //   std::unique_ptr<CG_Data::VBO> indexVBO = std::make_unique<CG_Data::VBO>((void*)&indices[0], 36 * sizeof(unsigned int), GL_STATIC_DRAW, GL_ELEMENT_ARRAY_BUFFER);
+       auto indexVBO = new CG_Data::VBO((void*)&indices[0], 36 * sizeof(unsigned int), GL_STATIC_DRAW, GL_ELEMENT_ARRAY_BUFFER);
+        indexVBO->BindVBO();
+      //  CubemapVAO->AddVBO(std::move(indexVBO));
+        //std::unique_ptr<CG_Data::VBO> meshVBO = std::make_unique<CG_Data::VBO>((void*)&vertices[0], 24 * sizeof(float), GL_STATIC_DRAW);
+        auto meshVBO = new CG_Data::VBO((void*)&vertices[0], 24 * sizeof(float), GL_STATIC_DRAW);
+        meshVBO->BindVBO();
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
         glEnableVertexAttribArray(1);
-        CubemapVAO->AddVBO(std::move(meshVBO));
+     //   CubemapVAO->AddVBO(std::move(meshVBO));
     }
 
     void Cubemap::CubemapRenderer(RenderPass& _Pass, void* _Data) {
-        _Pass.shader->UseShader();
+        _Pass.shader->useShader();
         _Pass.BatchVao->BindVAO();
         _Pass.Textures[0]->Bind();
         _Pass.DrawFunction();
@@ -162,6 +167,7 @@ namespace GL_Engine {
 
     void EnvironmentMap::setDynamicRenderer( std::shared_ptr< Renderer > _dynamicRenderer ){
         this->dynamicRenderer = std::move( _dynamicRenderer );
+        this->dynamicRenderer->AddUBO( this->envCamera.getCameraUbo().get() );
     }
 
     std::shared_ptr< CG_Data::Texture > EnvironmentMap::getStaticTexture(){

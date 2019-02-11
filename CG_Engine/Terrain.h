@@ -45,6 +45,7 @@ namespace GL_Engine {
 		struct TerrainPack {
 			std::vector<std::shared_ptr<TerrainChunk>> TerrainChunks;
 			unsigned int translationUniformLocation;
+			Entity terrainEntity;
 		};
 	public:
 		Terrain(uint32_t _MeshSize, uint32_t _DivisionCount);
