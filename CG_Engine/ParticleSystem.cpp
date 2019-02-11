@@ -21,13 +21,13 @@ namespace GL_Engine {
 	{
 	}
 
-	std::unique_ptr<RenderPass> ParticleSystem::GenerateParticleSystem(const ParticleStats &stats, CG_Data::UBO *_CameraUBO)
+	std::unique_ptr<RenderPass> ParticleSystem::GenerateParticleSystem(const ParticleStats &stats, std::shared_ptr< CG_Data::UBO > _CameraUBO)
 	{
 		srand(123184103u);
 		//Set entity/particle initial values
 		this->ParticleCount = stats.ParticleCount;
 		this->Position = glm::vec4(stats.Position, 1.0);
-		this->CameraUBO = _CameraUBO;
+		this->cameraUBO = _CameraUBO;
 		this->Orientation = glm::quat(0.0, 0.0, 0.0, 1.0);
 		this->Forward = glm::vec3(0, 0, 1);
 		this->Up = glm::vec3(0, 1, 0);
@@ -148,21 +148,21 @@ namespace GL_Engine {
 		auto Vec4Lambda = [](const CG_Data::Uniform &u) {glUniform4fv(u.GetID(), 1, static_cast<const GLfloat*>(u.GetData())); };
 
 		this->ParticleShader = std::make_unique<Shader>();
-		this->ParticleShader->RegisterShaderStage(ParticleSystemVSource.c_str(), GL_VERTEX_SHADER);
-		this->ParticleShader->RegisterShaderStage(ParticleSystemFSource.c_str(), GL_FRAGMENT_SHADER);
-		this->ParticleShader->RegisterAttribute("Velocity", 0);
-		this->ParticleShader->RegisterAttribute("Time", 1);
-		this->ParticleShader->RegisterAttribute("Size", 2);
-		this->ParticleShader->RegisterAttribute("Colour", 3);
-		this->ParticleShader->RegisterAttribute("Opacity", 4);
-		this->ParticleShader->RegisterAttribute("Lifetime", 5);
-		this->ParticleShader->RegisterUBO(std::string("CameraProjectionData"), this->CameraUBO);
-		auto TimeUniform = this->ParticleShader->RegisterUniform("CurrentTime", FloatLambda);
-		auto EmitterUniform = this->ParticleShader->RegisterUniform("EmitterPosition", Vec3Lambda);
-		auto DirectionUniform = this->ParticleShader->RegisterUniform("EmitterDirection", Vec3Lambda);
-		auto ModelUniform = this->ParticleShader->RegisterUniform("model", MatrixLambda);
-		auto GravityUniform = this->ParticleShader->RegisterUniform("Gravity", Vec3Lambda);
-		this->ParticleShader->CompileShader();
+		this->ParticleShader->registerShaderStage(ParticleSystemVSource.c_str(), GL_VERTEX_SHADER);
+		this->ParticleShader->registerShaderStage(ParticleSystemFSource.c_str(), GL_FRAGMENT_SHADER);
+		this->ParticleShader->registerAttribute("Velocity", 0);
+		this->ParticleShader->registerAttribute("Time", 1);
+		this->ParticleShader->registerAttribute("Size", 2);
+		this->ParticleShader->registerAttribute("Colour", 3);
+		this->ParticleShader->registerAttribute("Opacity", 4);
+		this->ParticleShader->registerAttribute("Lifetime", 5);
+		this->ParticleShader->registerUBO(std::string("CameraProjectionData"), this->cameraUBO);
+		auto TimeUniform = this->ParticleShader->registerUniform("CurrentTime", FloatLambda);
+		auto EmitterUniform = this->ParticleShader->registerUniform("EmitterPosition", Vec3Lambda);
+		auto DirectionUniform = this->ParticleShader->registerUniform("EmitterDirection", Vec3Lambda);
+		auto ModelUniform = this->ParticleShader->registerUniform("model", MatrixLambda);
+		auto GravityUniform = this->ParticleShader->registerUniform("Gravity", Vec3Lambda);
+		this->ParticleShader->compileShader();
 
 		glUniform3f(GravityUniform->GetID(), 0, -1, 0);
 
@@ -178,10 +178,10 @@ namespace GL_Engine {
 		ParticlePass->SetDrawFunction([count]() {glDrawArrays(GL_POINTS, 0, count); });
 		ParticlePass->BatchVao = this->ParticleVAO;
 		ParticlePass->AddBatchUnit(this);
-		ParticlePass->AddDataLink(ModelUniform, 0);
-		ParticlePass->AddDataLink(TimeUniform, TimeIndex);
-		ParticlePass->AddDataLink(EmitterUniform, EmitterIndex);
-		ParticlePass->AddDataLink(DirectionUniform, DirectionIndex);
+		ParticlePass->AddDataLink(ModelUniform.get(), 0);
+		ParticlePass->AddDataLink(TimeUniform.get(), TimeIndex);
+		ParticlePass->AddDataLink(EmitterUniform.get(), EmitterIndex);
+		ParticlePass->AddDataLink(DirectionUniform.get(), DirectionIndex);
 		
 
 		return std::move(ParticlePass);
@@ -201,7 +201,7 @@ namespace GL_Engine {
 		glEnable(GL_PROGRAM_POINT_SIZE);
 		glEnable(GL_BLEND);
 
-		_Pass.shader->UseShader();
+		_Pass.shader->useShader();
 		_Pass.BatchVao->BindVAO();
 
 		for (auto&& batch : _Pass.batchUnits) {

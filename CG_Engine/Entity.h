@@ -33,6 +33,8 @@ namespace GL_Engine {
 		const glm::quat GetOrientation() const;
 		const glm::vec4 GetPosition() const;
 
+		void update();
+
 		const glm::mat4 TransformBy(glm::mat4 _Transform);
 
 		const uint16_t AddData(void* _Data);

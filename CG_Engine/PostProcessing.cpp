@@ -30,14 +30,14 @@ namespace GL_Engine {
 		OutputColourBuffer.reset();
 		InputTexture.reset();
 		ScreenVAO.reset();
-		shader.Cleanup();
+		shader.cleanup();
 	}
 	void PostProcessing::Cleanup() {
 		ProcessingFBO.reset();
 		OutputColourBuffer.reset();
 		InputTexture.reset();
 		ScreenVAO.reset();
-		shader.Cleanup();
+		shader.cleanup();
 	}
 	CG_Data::Uniform* PostProcessing::AddAttachment(PostprocessingAttachment _Attachment) {
 		switch (_Attachment)
@@ -45,10 +45,10 @@ namespace GL_Engine {
 		case GaussianBlur:
 		{
 			auto GaussianLambdaUpdater = [](const CG_Data::Uniform &u) {glUniform1fv(u.GetID(), 5, static_cast<const GLfloat*>(u.GetData())); };
-			auto uni = shader.RegisterUniform("GaussianWeights", GaussianLambdaUpdater);
+			auto uni = shader.registerUniform("GaussianWeights", GaussianLambdaUpdater);
 			AttachmentStringComponents[0] += "uniform float GaussianWeights[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);\n";
 			AttachmentStringComponents[1] += "BloomEffect();\n";
-			return uni;
+			return uni.get();
 		};
 		case SaturationAdjust:
 		{
@@ -73,14 +73,14 @@ namespace GL_Engine {
 
 		FragmentStream << "}\n";
 		FragmentShader = FragmentStream.str();
-		shader.RegisterShaderStage(this->VertexShader.c_str(), GL_VERTEX_SHADER);
-		shader.RegisterShaderStage(this->FragmentShader.c_str(), GL_FRAGMENT_SHADER);
-		shader.RegisterAttribute("vPosition", 0);
-		shader.RegisterAttribute("vTextureCoord", 1);
-		shader.RegisterTextureUnit("InputImage", 0);
-		auto resoUni = shader.RegisterUniform("resolution");
-		shader.CompileShader();
-		shader.UseShader();
+		shader.registerShaderStage(this->VertexShader.c_str(), GL_VERTEX_SHADER);
+		shader.registerShaderStage(this->FragmentShader.c_str(), GL_FRAGMENT_SHADER);
+		shader.registerAttribute("vPosition", 0);
+		shader.registerAttribute("vTextureCoord", 1);
+		shader.registerTextureUnit("InputImage", 0);
+		auto resoUni = shader.registerUniform("resolution");
+		shader.compileShader();
+		shader.useShader();
 		glUniform2f(resoUni->GetID(), (float)_Width, (float)_Height);
 
 		ScreenVAO = std::make_unique<CG_Data::VAO>();
@@ -117,8 +117,8 @@ namespace GL_Engine {
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shader.UseShader();
-		auto loc = glGetUniformLocation(shader.GetShaderID(), "resolution");
+		shader.useShader();
+		auto loc = glGetUniformLocation(shader.getShaderID(), "resolution");
 		glUniform2f(loc, Resolution.x, Resolution.y);
 
 		for (auto u : Uniforms)

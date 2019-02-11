@@ -17,6 +17,8 @@ namespace GL_Engine {
 		const std::shared_ptr< RenderPass > GetRenderPass() const;
 
 		std::shared_ptr<CG_Data::Texture> getTextureMap();
+		static const float vertices[24];
+		static const unsigned int indices[36];
 
 	private:
 		void CreateShader(Shader *_Shader);
@@ -28,8 +30,6 @@ namespace GL_Engine {
 		Shader *CubemapShader;
 		std::shared_ptr<CG_Data::VAO> CubemapVAO;
 
-		static const float vertices[24];
-		static const unsigned int indices[36];
 
 		static void CubemapRenderer(RenderPass&, void*);
 

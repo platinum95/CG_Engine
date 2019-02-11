@@ -13,7 +13,7 @@ Renderer::~Renderer() {
 	}
 }
 
-void Cleanup() {
+void Renderer::Cleanup() {
 
 }
 
@@ -59,12 +59,17 @@ void GL_Engine::Renderer::Render() const {
 }
 
 void GL_Engine::Renderer::AddUBO(CG_Data::UBO* _ubo) {
-	this->UBO_List.push_back(_ubo);
+	// Make sure its a unique list
+	if ( std::find( UBO_List.begin(),
+					UBO_List.end(), _ubo) == UBO_List.end()) {
+  		this->UBO_List.push_back(_ubo);
+	}
+	
 }
 
 
 void Renderer::DefaultRenderer(RenderPass& _Pass, void* _Data) {
-	_Pass.shader->UseShader();
+	_Pass.shader->useShader();
 	_Pass.BatchVao->BindVAO();
 	for (auto tex : _Pass.Textures) {
 		tex->Bind();
@@ -76,6 +81,7 @@ void Renderer::DefaultRenderer(RenderPass& _Pass, void* _Data) {
 				l.uniform->Update();
 			}
 			batch->entity->UpdateUniforms();
+			batch->entity->update();
 			_Pass.DrawFunction();
 		}
 	}

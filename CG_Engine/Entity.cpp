@@ -102,13 +102,19 @@ namespace GL_Engine {
 	}
 
 	const glm::mat4 Entity::GetTransformMatrix() {
+		// Update the model matrix
+		this->update();
+		
+		//Return the model matrix
+		return this->TransformMatrix;
+	}
+
+	void Entity::update() {
 		//Check if the local values have changed
 		if (MatrixNeedsUpdating) {
 			UpdateMatrix();	//Update matrix if so
 			MatrixNeedsUpdating = false;
 		}
-		//Return the model matrix
-		return this->TransformMatrix;
 	}
 
 	void Entity::UpdateMatrix() {
@@ -378,7 +384,7 @@ namespace GL_Engine {
 		
 		RiggedModel *Model = static_cast<RiggedModel*>(_Data);
 		auto Rig = Model->GetRig();
-		_Pass.shader->UseShader();
+		_Pass.shader->useShader();
 
 		for (auto l : _Pass.dataLink) {
 			l.uniform->SetData(Model->GetData(l.eDataIndex));
@@ -387,7 +393,7 @@ namespace GL_Engine {
 		Model->UpdateUniforms();
 
 		glm::mat4 t(1.0f);
-		auto modelMatLoc = glGetUniformLocation(_Pass.shader->GetShaderID(), "model");
+		auto modelMatLoc = glGetUniformLocation(_Pass.shader->getShaderID(), "model");
 		glUniformMatrix4fv(modelMatLoc, 1, GL_FALSE, glm::value_ptr(Model->GetTransformMatrix()));
 
 		
@@ -396,7 +402,7 @@ namespace GL_Engine {
 			for (auto tex : attrib->ModelTextures) {
 				tex->Bind();
 			}
-			auto boneMatLoc = glGetUniformLocation(_Pass.shader->GetShaderID(), "BoneMatrices");
+			auto boneMatLoc = glGetUniformLocation(_Pass.shader->getShaderID(), "BoneMatrices");
 			std::vector<glm::mat4> boneMatrices((const size_t)56, glm::mat4(1.0));
 			int i = 0;
 			if (attrib->meshBones.size() > 0) {
@@ -408,7 +414,7 @@ namespace GL_Engine {
 			}
 			else {
 				glm::mat4 id(1.0);
-				auto boneMatLoc = glGetUniformLocation(_Pass.shader->GetShaderID(), "BoneMatrices");
+				auto boneMatLoc = glGetUniformLocation(_Pass.shader->getShaderID(), "BoneMatrices");
 				glUniformMatrix4fv(boneMatLoc, 1, GL_FALSE, glm::value_ptr(id));
 			}
 			glDrawElements(GL_TRIANGLES, (GLsizei)attrib->GetVertexCount(), GL_UNSIGNED_INT, 0);

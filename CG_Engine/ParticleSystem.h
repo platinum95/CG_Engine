@@ -20,7 +20,7 @@ namespace GL_Engine {
 		};
 		ParticleSystem();
 		~ParticleSystem();
-		std::unique_ptr<RenderPass> GenerateParticleSystem(const ParticleStats &stats, CG_Data::UBO *_CameraUBO);
+		std::unique_ptr<RenderPass> GenerateParticleSystem(const ParticleStats &stats, std::shared_ptr< CG_Data::UBO > _CameraUBO);
 		void UpdateTime(const float &_Diff);
 		void SetTime(const float &_CurrentTime);
 		const float& GetTime() const;
@@ -30,7 +30,7 @@ namespace GL_Engine {
 		static const std::string ParticleSystemFSource;
 		static const std::string ParticleSystemVSource;
 		uint32_t ParticleCount;
-		CG_Data::UBO *CameraUBO;
+		std::shared_ptr< CG_Data::UBO > cameraUBO;
 		std::unique_ptr<Shader> ParticleShader;
 		std::shared_ptr<CG_Data::VAO> ParticleVAO;
 		float Time;
