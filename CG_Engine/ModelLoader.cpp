@@ -92,6 +92,8 @@ namespace GL_Engine {
                 aiTextureType_HEIGHT, _PathBase, this->ModelTextures);
             ModelLoader::loadMaterial(material,
                 aiTextureType_SPECULAR, _PathBase, this->ModelTextures);
+            ModelLoader::loadMaterial(material,
+                aiTextureType_SHININESS, _PathBase, this->ModelTextures);
 
         }
 
@@ -318,22 +320,61 @@ namespace GL_Engine {
                 _Textures.push_back( cachedTextures[ texPath ] );
                 continue;
             }
-            const auto texture = loadTexture( texPath, GL_TEXTURE0 + (GLuint)_Textures.size());
+            GLuint texUnit = GL_TEXTURE0;
+
+            switch( _Type ){
+                case aiTextureType_DIFFUSE:
+                    texUnit = GL_TEXTURE0;
+                    break;
+                case aiTextureType_NORMALS:
+                    texUnit = GL_TEXTURE1;
+                    break;
+                case aiTextureType_SPECULAR:
+                    texUnit = GL_TEXTURE2;
+                    break;
+                case aiTextureType_SHININESS:
+                    texUnit = GL_TEXTURE3;
+                    break;
+                case aiTextureType_HEIGHT:
+                    texUnit = GL_TEXTURE4;
+                    break;
+
+            }
+            const auto texture = loadTexture( texPath, texUnit );
             _Textures.push_back( texture );
             cachedTextures[ texPath ] = std::move( texture );
         }
         return _Textures;
     }
 
-    std::shared_ptr<Texture> ModelLoader::loadTexture( const std::string & _Path, GLuint _Unit ){
+    std::shared_ptr<Texture>
+    ModelLoader::loadTexture( const std::string & _Path, GLuint _Unit ){
         int width, height, nChannels;
-        void* data = File_IO::LoadImageFile(_Path, width, height, nChannels, true);
-        GLint format = nChannels == 3 ? GL_RGB : GL_RGBA;
+        void* data = File_IO::LoadImageFile( _Path, width, 
+                                             height, nChannels, true );
+        GLint format = GL_RGB;
+        switch( nChannels ){
+            case 0:
+                break;
+            case 1:
+                format = GL_RED;
+                break;
+            case 2:
+                break;
+            case 3:
+                format = GL_RGB;
+                break;
+            case 4:
+                format = GL_RGBA;
+                break;
+        }
         auto parameters = []() {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
         };
-        std::shared_ptr<Texture> newTexture = std::make_shared<Texture>(data, width, height, _Unit, format, parameters, GL_TEXTURE_2D);
+        std::shared_ptr<Texture> newTexture =
+            std::make_shared<Texture>( data, width, height, _Unit, format, 
+                                       parameters, GL_TEXTURE_2D );
         free(data);
         //File_IO::FreeImageData(data);
         return newTexture;

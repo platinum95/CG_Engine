@@ -4,196 +4,241 @@
 
 namespace GL_Engine{
 
-	Shader::Shader(){
-		this->UBO_BlockIndices = std::map<std::string, UBO_Struct>();
-	}
+    Shader::Shader(){
+    //    this->uboBlockIndices = std::map< std::string, 
+    //                                      std::unique_ptr< UboStruct > >();
+    }
 
 
-	Shader::~Shader(){
-		if (initialised) {
-			glDeleteProgram(this->ShaderID);
-			initialised = false;
-		}
-	}
+    Shader::~Shader(){
+        if (initialised) {
+            glDeleteProgram(this->shaderID);
+            initialised = false;
+        }
+    }
 
-	void Shader::Cleanup() {
-		if (initialised) {
-			glDeleteProgram(this->ShaderID);
-			initialised = false;
-		}
-	}
+    void Shader::cleanup() {
+        if( initialised ) {
+            glDeleteProgram( this->shaderID );
+            initialised = false;
+        }
+    }
 
-	const GLuint Shader::GetShaderID() const {
-		return ShaderID;
-	}
+    const GLuint Shader::getShaderID() const {
+        return this->shaderID;
+    }
 
-	const uint8_t Shader::CompileShader(){
-		this->ShaderID = glCreateProgram();
-		if (!ShaderID) {
-			throw std::runtime_error("Error generating Shader ID!");
-			return 0;
-		}
+    const uint8_t Shader::compileShader(){
+        this->shaderID = glCreateProgram();
+        if ( !this->shaderID ) {
+            throw std::runtime_error( "Error generating Shader ID!" );
+            return 0;
+        }
 
-		for (auto Attrib : this->Attributes) {
-			glBindAttribLocation(ShaderID, Attrib->Location, Attrib->AttributeName);
-			delete Attrib;
-		}
-		Attributes.clear();
+        for ( auto attrib : this->attributes ){
+            glBindAttribLocation( this->shaderID, attrib->location,
+                                  attrib->attributeName.c_str() );
+        }
 
-		// Attach each compiled stage to the Shader Program
-		for (auto Stage : this->shaderStages){
-			CompileShaderStage(Stage);
-			glAttachShader(ShaderID, Stage->ID);
-		}
+        // Attach each compiled stage to the Shader Program
+        for ( auto stage : this->shaderStages ){
+            this->compileShaderStage( stage );
+            glAttachShader( this->shaderID, stage->id );
+        }
 
-		glLinkProgram(ShaderID);
-		GLchar ErrorBuffer[1024] = { 0 };
-		GLint Result;
-		glGetProgramiv(ShaderID, GL_LINK_STATUS, &Result);
-		if (!Result) {
-			glGetProgramInfoLog(ShaderID, sizeof(ErrorBuffer), NULL, ErrorBuffer);
-			throw std::runtime_error("Error linking Shader\n" + std::string(ErrorBuffer));
-			return 0;
-		}
-                unsigned int tempVao;
-                glGenVertexArrays( 1, &tempVao );
-                glBindVertexArray( tempVao );
-		glValidateProgram(ShaderID);
-		glDeleteVertexArrays( 1, &tempVao );
-		glGetProgramiv(ShaderID, GL_VALIDATE_STATUS, &Result);
-		if (!Result) {
-			glGetProgramInfoLog(ShaderID, sizeof(ErrorBuffer), NULL, ErrorBuffer);
-			throw std::runtime_error("Error linking Shader!\n" + std::string(ErrorBuffer));
-			return 0;
-		}
+        glLinkProgram( this->shaderID );
+        GLchar errorBuffer[ 1024 ] = { 0 };
+        GLint result;
+        glGetProgramiv( this->shaderID, GL_LINK_STATUS, &result );
+        if ( !result ) {
+            glGetProgramInfoLog( this->shaderID, sizeof( errorBuffer ), NULL, 
+                                 errorBuffer );
+            throw std::runtime_error( "Error linking Shader\n" +
+                                      std::string( errorBuffer ) );
+            return 0;
+        }
+        unsigned int tempVao;
+        glGenVertexArrays( 1, &tempVao );
+        glBindVertexArray( tempVao );
 
-		for (auto uni : Uniforms) {
-			uni->UniformObject->SetID(glGetUniformLocation(ShaderID, uni->Name));
-			UniformMap[uni->Name] = uni->UniformObject;
-			//delete uni;
-		}
-		for (auto &ubo : UBO_BlockIndices) {
-			ubo.second.BlockIndex = glGetUniformBlockIndex(this->ShaderID, ubo.first.c_str());
-		}
-		glUseProgram(this->ShaderID);
-		for(auto tex : TextureLocations){
-			glUniform1i(glGetUniformLocation(this->ShaderID, tex.first.c_str()), tex.second);
-		}
-		//UBOs.clear();
-		
+        glValidateProgram( this->shaderID );
+        glDeleteVertexArrays( 1, &tempVao );
+        glGetProgramiv( this->shaderID, GL_VALIDATE_STATUS, &result );
+        if ( !result ) {
+            glGetProgramInfoLog( this->shaderID, sizeof( errorBuffer ),
+                                 NULL, errorBuffer );
+            throw std::runtime_error( "Error linking Shader!\n" +
+                                     std::string( errorBuffer ) );
+            return 0;
+        }
 
-		for (auto Stage : this->shaderStages){
-			glDeleteShader(Stage->ID);	//Stages no longer needed, so clean them up
-			delete Stage;
-		}
-		shaderStages.clear();
-		initialised = true;
-		return ShaderID;
-	}
+        for ( auto uniform : this->uniforms ){
+            uniform->uniformObject->SetID( 
+                    glGetUniformLocation( shaderID, uniform->name.c_str() ) );
+            this->uniformMap[ uniform->name ] = uniform->uniformObject;
+        }
 
-	bool Shader::RegisterShaderStageFromFile(const char * _FilePath, GLenum _StageType){
-		uint8_t FileLoadResult;
-		const char* ShaderText = File_IO::LoadTextFile(_FilePath, &FileLoadResult);
-		if (FileLoadResult || ShaderText == nullptr) {
-			throw std::runtime_error("Error loading shader file " + std::string(_FilePath));
-		}
+        for ( auto & ubo : uboBlockIndices ) {
+            ubo.second->blockIndex = glGetUniformBlockIndex( this->shaderID,
+                                                            ubo.first.c_str() );
+        }
 
-		RegisterShaderStage(ShaderText, _StageType);
-		return true;
-	}
-	void Shader::RegisterShaderStage(const char* _ShaderSource, GLenum _StageType) {
-		ShaderStage *stage = new ShaderStage;
-		stage->Source = _ShaderSource;
-		stage->Type = _StageType;
-		this->shaderStages.push_back(stage);
-		return;
-	}
+        glUseProgram( this->shaderID );
+        for( auto tex : textureLocations ){
+            glUniform1i( glGetUniformLocation( this->shaderID, 
+                                               tex.first.c_str() ),
+                         tex.second );
+        }
 
-	void Shader::RegisterAttribute(const char * _AttributeName, GLuint _Location){
-		Attribute *attrib = new Attribute;
-		attrib->AttributeName = _AttributeName;
-		attrib->Location = _Location;
-		Attributes.push_back(attrib);
-		return;
-	}
+        for ( auto attrib : this->attributes ){
+            GLuint location = glGetAttribLocation( this->shaderID, 
+                                                   attrib->attributeName.c_str()
+                                                 );
+            if( location != attrib->location ){
+                std::cout << "Warning! Intended location of attribute " <<
+                             attrib->attributeName << " (" << attrib->location
+                             << ") does not match actual location (" <<
+                             location << ")." << std::endl;
+            }
+            delete attrib;
+        }
+        attributes.clear();
+        
 
-	void Shader::UseShader() const {
-		if (UBO_BlockIndices.size() > 0) {
-			for (auto ubo : UBO_BlockIndices) {
-				glUniformBlockBinding(this->ShaderID, ubo.second.BlockIndex, ubo.second.ubo->GetBindingPost());
-			}
-		}
-		glUseProgram(this->ShaderID);
-	}
+        for ( auto stage : this->shaderStages ){
+            glDeleteShader( stage->id );
+            delete stage; //Stages no longer needed, so clean them up
+        }
+        shaderStages.clear();
+        initialised = true;
+        return this->shaderID ;
+    }
 
-	CG_Data::Uniform * Shader::RegisterUniform(const char * _UniformName){
-		UniformStruct *uniform = new UniformStruct;
-		uniform->UniformObject = new CG_Data::Uniform();
-		uniform->Name = _UniformName;
-		this->Uniforms.push_back(uniform);
-		return uniform->UniformObject;
-	}
-	CG_Data::Uniform * Shader::RegisterUniform(const char * _UniformName, std::function<void(const CG_Data::Uniform&)> _CallbackFunction) {
-		UniformStruct *uniform = new UniformStruct;
-		uniform->UniformObject = new CG_Data::Uniform();
-		uniform->Name = _UniformName;
-		uniform->UniformObject->SetUpdateCallback(_CallbackFunction);
-		this->Uniforms.push_back(uniform);
-		return uniform->UniformObject;
-	}
+    bool Shader::registerShaderStageFromFile( const std::string & _filePath, 
+                                              GLenum _stageType ){
+        uint8_t fileLoadResult;
+        std::string shaderText = File_IO::loadTextFile( _filePath,
+                                                        & fileLoadResult );
+        if ( fileLoadResult || shaderText.empty() ) {
+            throw std::runtime_error( "Error loading shader file " +
+                                      std::string( _filePath ) );
+        }
 
-	const GLuint Shader::CompileShaderStage(ShaderStage * stage){
-		stage->ID = glCreateShader(stage->Type);
+        this->registerShaderStage( shaderText, _stageType );
+        return true;
+    }
+    void Shader::registerShaderStage( std::string _shaderSource,
+                                      GLenum _stageType ){
+        ShaderStage *stage = new ShaderStage;
+        stage->source = std::move( _shaderSource );
+        stage->type = _stageType;
+        this->shaderStages.push_back( stage );
+        return;
+    }
 
-		if (stage->ID == 0) {
-			throw std::runtime_error("Error creating shader stage!");
-			return -1;
-		}
-		//Bind the source to the Stage, and compile
-		glShaderSource(stage->ID, 1, (const GLchar**)&stage->Source, NULL);
-		glCompileShader(stage->ID);
-		GLint Result;
-		// check for shader related errors using glGetShaderiv
-		glGetShaderiv(stage->ID, GL_COMPILE_STATUS, &Result);
-		if (!Result) {
-			GLchar ErrorBuffer[1024];
-			glGetShaderInfoLog(stage->ID, 1024, NULL, ErrorBuffer);
-			throw std::runtime_error("Error compiling shader!\n" + std::string(ErrorBuffer));
-			return -1;
-		}
-		return stage->ID;
-	}
+    void Shader::registerAttribute( const std::string & _attributeName,
+                                    GLuint _location ){
+        Attribute *attrib = new Attribute;
+        attrib->attributeName = _attributeName;
+        attrib->location = _location;
+        this->attributes.push_back( attrib );
+        return;
+    }
 
-	//Register a shader attribute, to be bound at _Location
-	void Shader::RegisterTextureUnit(std::string _AttributeName, GLuint _Location) {
-		this->TextureLocations[_AttributeName] = _Location;
-	}
+    void Shader::useShader() const {
+        if ( uboBlockIndices.size() > 0 ) {
+            for ( auto & ubo : uboBlockIndices ) {
+                auto bPost = ubo.second->ubo->GetBindingPost();
+                glUniformBlockBinding( this->shaderID, ubo.second->blockIndex,
+                                       bPost );
+            }
+        }
+        glUseProgram( this->shaderID );
+    }
 
-	void Shader::RegisterUBO(const std::string &_UBO_Name, CG_Data::UBO *_ubo) {
-		UBO_Struct ubo_struct;
-		ubo_struct.ubo = _ubo;
-		UBO_BlockIndices[_UBO_Name] = ubo_struct;
-	}
+    std::shared_ptr< CG_Data::Uniform >
+    Shader::registerUniform( const std::string & _uniformName ){
+        UniformStruct *uniform = new UniformStruct;
+        uniform->uniformObject = std::make_shared< CG_Data::Uniform >();
+        uniform->name = _uniformName;
+        this->uniforms.push_back( uniform );
+        return uniform->uniformObject;
+    }
+    std::shared_ptr< CG_Data::Uniform >
+    Shader::registerUniform( const std::string & _uniformName, 
+                             std::function< void( const CG_Data::Uniform & ) > 
+                                _callbackFunction ){
+        UniformStruct *uniform = new UniformStruct;
+        uniform->uniformObject = std::make_shared< CG_Data::Uniform >();
+        uniform->name = _uniformName;
+        uniform->uniformObject->SetUpdateCallback( _callbackFunction );
+        this->uniforms.push_back( uniform );
+        return uniform->uniformObject;
+    }
 
-	CG_Data::Uniform* Shader::GetUniform(uint8_t index) const {
-		return Uniforms[index]->UniformObject;
-	}
-	CG_Data::Uniform* Shader::GetUniform(std::string _uName) {
-		return UniformMap[_uName];
-	}
+    const GLuint Shader::compileShaderStage( ShaderStage * stage ){
+        stage->id = glCreateShader( stage->type );
+
+        if ( stage->id == 0 ) {
+            throw std::runtime_error( "Error creating shader stage!" );
+            return -1;
+        }
+        //Bind the source to the Stage, and compile
+        glShaderSource( stage->id, 1, 
+                        ( const GLchar** ) & stage->source, nullptr );
+        glCompileShader( stage->id );
+        GLint result;
+        // check for shader related errors using glGetShaderiv
+        glGetShaderiv( stage->id, GL_COMPILE_STATUS, &result );
+        if( !result ){
+            GLchar errorBuffer[1024];
+            glGetShaderInfoLog( stage->id, 1024, nullptr, errorBuffer );
+            throw std::runtime_error( "Error compiling shader stage!\n" +
+                                      std::string( errorBuffer ) );
+            return -1;
+        }
+        return stage->id;
+    }
+
+    //Register a shader attribute, to be bound at _Location
+    void Shader::registerTextureUnit( const std::string & _attributeName,
+                                      GLuint _location ){
+        this->textureLocations[ _attributeName ] = _location;
+    }
+
+    void Shader::registerUBO( const std::string &_uboName,
+                              std::shared_ptr< const CG_Data::UBO > _ubo ){
+        auto uboStruct = std::make_unique< UboStruct>();
+        uboStruct->ubo = _ubo;
+        this->uboBlockIndices[ _uboName ] = std::move( uboStruct );
+    }
+
+    std::shared_ptr< CG_Data::Uniform > 
+    Shader::getUniform(uint8_t index) const {
+        return this->uniforms[ index ]->uniformObject;
+    }
+    std::shared_ptr< CG_Data::Uniform >
+    Shader::getUniform( const std::string & _uName ) {
+        try{
+            return this->uniformMap.at( _uName );
+        } catch( const std::out_of_range & e){
+            throw std::runtime_error( "Error: Uniform \"" + _uName + 
+            "\" does not exist for this shader" );
+        }
+    }
 
 
-	void Shader::UpdateUniforms() {
-		for (auto u : this->Uniforms) {
-			u->UniformObject->Update();
-		}
-	}
+    void Shader::updateUniforms() {
+        for ( auto u : this->uniforms ) {
+            u->uniformObject->Update();
+        }
+    }
 
-	bool Shader::Initialised() const { 
-		return this->initialised; 
-	}
+    bool Shader::isInitialised() const { 
+        return this->initialised; 
+    }
 
-	
+    
 
 
 }
