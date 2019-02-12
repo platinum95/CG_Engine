@@ -12,12 +12,13 @@ namespace GL_Engine {
 	class ModelLoader {
 	public:
 		// Load the attributes of a model from a given file path
-		ModelAttribList loadModel( const std::string & _modelPath, unsigned int _flags );
+		ModelAttribList loadModel( const std::filesystem::path & _modelPath,
+								   unsigned int _flags );
 
 		// Load the attributes of a given rigged model (with bones) 
 		// from a given file path
 		std::unique_ptr< RiggedModel > 
-			loadRiggedModel( const std::string &_modelPath, 
+			loadRiggedModel( const std::filesystem::path &_modelPath, 
 							 unsigned int _flags );
 
 		// Cleanup references etc.
@@ -27,7 +28,7 @@ namespace GL_Engine {
 		static std::vector< std::shared_ptr< CG_Data::Texture > >
 			loadMaterial( const aiMaterial *material,
 						  const aiTextureType _Type,
-						  const std::filesystem::path &_PathBase,
+						  const std::filesystem::path & _PathBase,
 						  std::vector< std::shared_ptr< CG_Data::Texture > >
 						  	& _textures );
 

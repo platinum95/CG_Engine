@@ -298,8 +298,9 @@ namespace GL_Engine {
 			dLink.uniform->Update();
 		}
 		chunks->terrainEntity.UpdateUniforms();
+		GLuint translationUniLoc = Pass.shader->getUniform( "GroundTranslation" )->GetID();
 		for (auto chunk : chunks->TerrainChunks) {
-			glUniformMatrix4fv( chunks->translationUniformLocation, 1, 
+			glUniformMatrix4fv( translationUniLoc, 1,
 							    GL_FALSE, 
 								glm::value_ptr( chunk->Translation ) );
 			chunk->BindVAO();

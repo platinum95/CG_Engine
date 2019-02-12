@@ -26,9 +26,10 @@ namespace GL_Engine {
     };
 
 
-    Cubemap::Cubemap(const std::vector<std::string> &_TextureFiles, Shader *_CubemapShader, Renderer *_Renderer) {
+    Cubemap::Cubemap( const std::vector< std::filesystem::path > & _textureFiles,
+					  Shader *_CubemapShader, Renderer *_Renderer ) {
         CubemapShader = _CubemapShader;
-        GenerateCubemap(_TextureFiles);
+        GenerateCubemap( _textureFiles );
         SetupArrayObjects();
         SetupRenderPass(_Renderer);
         CubeRenderPass->shader = this->CubemapShader;
@@ -42,14 +43,15 @@ namespace GL_Engine {
         return this->MapTexture;
     }
 
-    void Cubemap::GenerateCubemap(const std::vector<std::string> &_TextureFiles) {
+    void Cubemap::GenerateCubemap( const std::vector<std::filesystem::path > 
+									&_textureFiles ) {
         MapTexture = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP);
         MapTexture->Bind();
 
         GLenum type = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-        for (auto str : _TextureFiles) {
+        for ( auto str : _textureFiles ) {
             int width, height, nChannels;
-            void *data = File_IO::LoadImageFile(str, width, height, nChannels, false);
+            void *data = File_IO::LoadImageFile( str, width, height, nChannels, false );
             glTexImage2D(type++, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
             File_IO::FreeImageData(data);
         }

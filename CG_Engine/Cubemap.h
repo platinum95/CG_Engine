@@ -5,14 +5,17 @@
 #include "File_IO.h"
 #include "Shader.h"
 #include "Camera.h"
+#include <filesystem>
 
 namespace GL_Engine {
 	class Cubemap{
 	public:
-		Cubemap(const std::vector<std::string> &_TextureFiles, Shader *_CubemapShader, Renderer *_Renderer);
+		Cubemap( const std::vector< std::filesystem::path > & _textureFiles,
+				 Shader *_CubemapShader, Renderer *_Renderer );
 		~Cubemap();
 
-		void GenerateCubemap(const std::vector<std::string> &_TextureFiles);
+		void GenerateCubemap( const std::vector< std::filesystem::path > 
+								& _textureFiles );
 
 		const std::shared_ptr< RenderPass > GetRenderPass() const;
 

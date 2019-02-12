@@ -121,16 +121,18 @@ namespace GL_Engine {
     std::map < std::string, std::shared_ptr< Texture > > 
         ModelLoader::cachedTextures;
 
-    ModelAttribList ModelLoader::loadModel( const std::string &_modelPath,
-                                            unsigned int _flags ){
+    ModelAttribList
+	ModelLoader::loadModel( const std::filesystem::path &_modelPath,
+							unsigned int _flags ){
         
 		auto filePath = std::filesystem::path(_modelPath);
         auto pathBase = filePath.parent_path();
         auto modelFile = filePath.filename();
         const aiScene* _Scene = aImporter.ReadFile( filePath.generic_string(), _flags );
         if ( !_Scene ) {
-            throw std::runtime_error( "Error loading model " + \
-                _modelPath + "\n" + aImporter.GetErrorString() + "\n" );
+            throw std::runtime_error( "Error loading model " +
+									  _modelPath.string() + "\n" + 
+									  aImporter.GetErrorString() + "\n" );
         }
 
         auto numMeshes = _Scene->mNumMeshes;
@@ -200,7 +202,7 @@ namespace GL_Engine {
     }
 
     std::unique_ptr<RiggedModel>
-        ModelLoader::loadRiggedModel( const std::string &_modelPath,
+        ModelLoader::loadRiggedModel( const std::filesystem::path &_modelPath,
                                       unsigned int _flags ){
 
         auto filePath = std::filesystem::path( _modelPath );
@@ -209,7 +211,9 @@ namespace GL_Engine {
 
         const aiScene* _Scene = aImporter.ReadFile( filePath.generic_string(), _flags);
         if (!_Scene) {
-            throw std::runtime_error("Error loading model " + _modelPath + "\n" + aImporter.GetErrorString() + "\n");
+            throw std::runtime_error( "Error loading model " +
+									  _modelPath.string() + "\n" +
+									  aImporter.GetErrorString() + "\n" );
         }
         //Load in the scene's nodes
         std::map<std::string, std::shared_ptr<SceneNode>> Nodes;

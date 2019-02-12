@@ -4,6 +4,8 @@
 #include "Common.h"
 #include "CG_Data.h"
 #include <map>
+#include <filesystem>
+
 namespace GL_Engine{
     class Shader
     {
@@ -19,8 +21,8 @@ namespace GL_Engine{
         const uint8_t compileShader();
 
         //Register a shader file to the pipeline
-        bool registerShaderStageFromFile( const std::string & _filePath,
-                                          GLenum _stageType );
+        bool registerShaderStageFromFile( 
+			const std::filesystem::path & _filePath, GLenum _stageType );
 
         //Register a shader source to the pipeline
         void registerShaderStage( std::string _shaderSource,

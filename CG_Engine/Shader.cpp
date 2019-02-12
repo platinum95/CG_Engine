@@ -116,14 +116,14 @@ namespace GL_Engine{
         return this->shaderID ;
     }
 
-    bool Shader::registerShaderStageFromFile( const std::string & _filePath, 
-                                              GLenum _stageType ){
+    bool Shader::registerShaderStageFromFile( 
+		const std::filesystem::path & _filePath, GLenum _stageType ){
         uint8_t fileLoadResult;
         std::string shaderText = File_IO::loadTextFile( _filePath,
                                                         & fileLoadResult );
         if ( fileLoadResult || shaderText.empty() ) {
             throw std::runtime_error( "Error loading shader file " +
-                                      std::string( _filePath ) );
+                                      std::string( _filePath.string() ) );
         }
 
         this->registerShaderStage( shaderText, _stageType );
@@ -186,8 +186,9 @@ namespace GL_Engine{
             return -1;
         }
         //Bind the source to the Stage, and compile
+		const char * shaderCStr = stage->source.c_str();
         glShaderSource( stage->id, 1, 
-                        ( const GLchar** ) & stage->source, nullptr );
+                        ( const GLchar** ) & shaderCStr, nullptr );
         glCompileShader( stage->id );
         GLint result;
         // check for shader related errors using glGetShaderiv
