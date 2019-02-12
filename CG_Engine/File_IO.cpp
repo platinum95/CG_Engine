@@ -16,18 +16,22 @@ namespace GL_Engine{
 	File_IO::~File_IO()
 	{
 	}
-	void File_IO::SaveImageFile(std::string _Path, int width, int height, int comp, void* data) {
-		stbi_write_bmp(_Path.c_str(), width, height, comp, data);
+	void File_IO::SaveImageFile( const std::filesystem::path & _path, int width,
+								 int height, int comp, void* data ){
+		const char * pathStr = _path.string().c_str();
+		stbi_write_bmp( pathStr, width, height, comp, data);
 	}
 
-	void* File_IO::LoadImageFile(std::string _Path, int &width, int &height, int &nChannels, bool flip) {
+	void* File_IO::LoadImageFile( const std::filesystem::path & _path,
+							      int &width, int &height,
+								  int &nChannels, bool flip ){
 		stbi_set_flip_vertically_on_load(flip);
-		void *data = stbi_load(_Path.c_str(), &width, &height, &nChannels, 0);
+		void *data = stbi_load( _path.string().c_str(), &width, &height, &nChannels, 0);
 		return data;
 	}
 
 
-	std::string File_IO::loadTextFile( const std::string & _filePath,
+	std::string File_IO::loadTextFile( const std::filesystem::path & _filePath,
 									   uint8_t * result ){
 		if ( _filePath == "" || _filePath.empty() ){
 			*result = 1;
@@ -54,7 +58,7 @@ namespace GL_Engine{
 		return fileStr;
 	}
 
-	void File_IO::FreeImageData(void* _Data){
+	void File_IO::FreeImageData( void* _Data ){
 		stbi_image_free(_Data);
 	}
 
