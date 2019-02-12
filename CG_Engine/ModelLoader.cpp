@@ -300,7 +300,7 @@ namespace GL_Engine {
     std::vector< std::shared_ptr< Texture > > 
         ModelLoader::loadMaterial( const aiMaterial *material,
                                    const aiTextureType _Type, 
-                                   const std::string &_PathBase, 
+                                   const std::filesystem::path &_PathBase,
                                    std::vector< std::shared_ptr< Texture > >
                                     & _Textures ){
         for (unsigned int i = 0; i < material->GetTextureCount(_Type); i++) {
@@ -348,7 +348,8 @@ namespace GL_Engine {
     }
 
     std::shared_ptr<Texture>
-    ModelLoader::loadTexture( const std::string & _Path, GLuint _Unit ){
+    ModelLoader::loadTexture( const std::filesystem::path & _Path, 
+							  GLuint _Unit ){
         int width, height, nChannels;
         void* data = File_IO::LoadImageFile( _Path, width, 
                                              height, nChannels, true );

@@ -1,5 +1,7 @@
 #pragma 
 #include "Entity.h"
+#include <filesystem>
+
 namespace GL_Engine {
 
 	/*-------------ModelLoader Class------------*/
@@ -25,13 +27,14 @@ namespace GL_Engine {
 		static std::vector< std::shared_ptr< CG_Data::Texture > >
 			loadMaterial( const aiMaterial *material,
 						  const aiTextureType _Type,
-						  const std::string &_PathBase,
+						  const std::filesystem::path &_PathBase,
 						  std::vector< std::shared_ptr< CG_Data::Texture > >
 						  	& _textures );
 
 		// Load a model's texture from file
 		static std::shared_ptr< CG_Data::Texture > 
-			loadTexture( const std::string & _Path, GLuint _Unit );
+			loadTexture( const std::filesystem::path & _Path,
+						 GLuint _Unit );
 
 	private:
 		Assimp::Importer aImporter;

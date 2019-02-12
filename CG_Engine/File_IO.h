@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <memory>
 #include <string>
+#include <filesystem>
 
 
 namespace GL_Engine{
@@ -11,13 +12,21 @@ namespace GL_Engine{
 	public:
 		File_IO();
 		~File_IO();
-		static std::string loadTextFile( const std::string & _filePath, 
-										 uint8_t * result );
+		static std::string
+		loadTextFile( const std::filesystem::path & _filePath,
+					  uint8_t * result );
+
+		std::filesystem::path p;
+
 		static void FreeImageData(void* _Data);
 	//	static void* LoadPNGImage(std::string _Path, int &width, int &height);
 	//	static void* LoadRawImage(std::string _Path, int &width, int &height);
-		static void* LoadImageFile(std::string _Path, int &width, int &height, int &nChannels, bool flip);
-		static void SaveImageFile(std::string _Path, int width, int height, int comp, void* data);
+		static void* LoadImageFile( const std::filesystem::path & _path,
+									int &width, int &height, int &nChannels,
+								    bool flip );
+		static void SaveImageFile( const std::filesystem::path & _path,
+								   int width, int height, int comp,
+								   void* data );
 	};
 }
 
