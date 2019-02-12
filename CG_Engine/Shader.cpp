@@ -57,20 +57,6 @@ namespace GL_Engine{
                                       std::string( errorBuffer ) );
             return 0;
         }
-        unsigned int tempVao;
-        glGenVertexArrays( 1, &tempVao );
-        glBindVertexArray( tempVao );
-
-        glValidateProgram( this->shaderID );
-        glDeleteVertexArrays( 1, &tempVao );
-        glGetProgramiv( this->shaderID, GL_VALIDATE_STATUS, &result );
-        if ( !result ) {
-            glGetProgramInfoLog( this->shaderID, sizeof( errorBuffer ),
-                                 NULL, errorBuffer );
-            throw std::runtime_error( "Error linking Shader!\n" +
-                                     std::string( errorBuffer ) );
-            return 0;
-        }
 
         for ( auto uniform : this->uniforms ){
             uniform->uniformObject->SetID( 
@@ -110,6 +96,22 @@ namespace GL_Engine{
             delete stage; //Stages no longer needed, so clean them up
         }
         shaderStages.clear();
+
+        unsigned int tempVao;
+        glGenVertexArrays( 1, &tempVao );
+        glBindVertexArray( tempVao );
+
+        glValidateProgram( this->shaderID );
+        glDeleteVertexArrays( 1, &tempVao );
+        glGetProgramiv( this->shaderID, GL_VALIDATE_STATUS, &result );
+        if ( !result ) {
+            glGetProgramInfoLog( this->shaderID, sizeof( errorBuffer ),
+                                 NULL, errorBuffer );
+            throw std::runtime_error( "Error linking Shader!\n" +
+                                     std::string( errorBuffer ) );
+            return 0;
+        }
+        
         initialised = true;
         return this->shaderID ;
     }
