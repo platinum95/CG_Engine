@@ -10,7 +10,8 @@ namespace GL_Engine {
 	class ModelLoader {
 	public:
 		// Load the attributes of a model from a given file path
-		ModelAttribList loadModel( const std::string & _modelPath, unsigned int _flags );
+		ModelAttribList loadModel( const std::string & _modelPath, 
+								   unsigned int _flags );
 
 		// Load the attributes of a given rigged model (with bones) 
 		// from a given file path
@@ -31,7 +32,8 @@ namespace GL_Engine {
 
 		// Load a model's texture from file
 		static std::shared_ptr< CG_Data::Texture > 
-			loadTexture( const std::string & _Path, GLuint _Unit );
+			loadTexture( const std::string & _Path, GLuint _Unit,
+						 std::function< void() > paramFunc=nullptr );
 
 	private:
 		Assimp::Importer aImporter;
