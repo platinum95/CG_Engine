@@ -300,7 +300,7 @@ namespace GL_Engine {
     std::vector< std::shared_ptr< Texture > > 
         ModelLoader::loadMaterial( const aiMaterial *material,
                                    const aiTextureType _Type, 
-                                   const std::string &_PathBase, 
+                                   const std::filesystem::path &_PathBase,
                                    std::vector< std::shared_ptr< Texture > >
                                     & _Textures ){
         for (unsigned int i = 0; i < material->GetTextureCount(_Type); i++) {
