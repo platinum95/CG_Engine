@@ -82,6 +82,10 @@ namespace GL_Engine {
 			eDataUniLink link = { _Uniform, _DataIndex };
 			this->dataLink.push_back(link);
 		}
+		void AddUniform( CG_Data::Uniform *_uniform, void * _data ) {
+			auto uniDataPair = std::make_pair( _uniform, _data );
+			this->uniforms.push_back( uniDataPair );
+		}
 		~RenderPass() {
 			BatchVao.reset();
 			for (auto &t : Textures) {
@@ -95,6 +99,7 @@ namespace GL_Engine {
 			}
 		}
 		std::vector<eDataUniLink> dataLink;
+		std::vector< std::pair< CG_Data::Uniform *, void * > > uniforms;
 		void* Data;
 		Shader* shader;
 		std::vector<std::unique_ptr<BatchUnit>> batchUnits;

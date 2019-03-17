@@ -82,6 +82,7 @@ namespace GL_Engine{
 			Texture(void* _Data, GLint width, GLint height, GLuint _Unit, GLuint _ImageFormat, std::function<void()> _Parameters, GLenum _Target = GL_TEXTURE_2D);
 			Texture( GLuint _Unit, GLenum _Target );
 			Texture( GLuint _Unit, GLenum _Target, GLint width, GLint height, std::function<void()> _Parameters );
+			Texture( GLuint _id, GLuint _unit, GLenum _target );
 			~Texture();
 			void Cleanup();
 
@@ -170,6 +171,8 @@ namespace GL_Engine{
 			public:
 				TexturebufferObject( uint16_t _Width, uint16_t _Height,
 									 uint8_t _Unit );
+				TexturebufferObject( std::shared_ptr< Texture > _tex );
+
 				void bind() const;
 				const std::shared_ptr< Texture > GetTexture() const;
 
@@ -178,7 +181,8 @@ namespace GL_Engine{
 			};
 
 			enum AttachmentType {
-				TextureAttachment, StencilAttachment, DepthAttachment
+				ColourRenderbuffer, StencilRenderbuffer, DepthRenderbuffer,
+				ColourTexture, DepthTexture
 			};
 
 			FBO( uint16_t _width, uint16_t _height );

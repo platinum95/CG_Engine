@@ -17,6 +17,16 @@ void Renderer::Cleanup() {
 
 }
 
+std::shared_ptr<RenderPass> GL_Engine::Renderer::AddRenderPass() {
+	
+	auto rPass =  std::make_shared< RenderPass >();
+	rPass->shader = nullptr;
+	rPass->renderFunction = DefaultRenderer;
+	rPass->Data = nullptr;
+	this->renderPasses.push_back( rPass );
+	return std::move( rPass );	
+}
+
 std::shared_ptr<RenderPass> GL_Engine::Renderer::AddRenderPass( Shader* _Shader ) {
 	
 	auto rPass =  std::make_shared<RenderPass>() ;

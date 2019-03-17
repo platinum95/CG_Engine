@@ -267,10 +267,14 @@ namespace GL_Engine {
 	}
 
 	std::unique_ptr< RenderPass >
-	Terrain::GetRenderPass( Shader * _GroundShader ) {
+	Terrain::GetRenderPass( Shader * _GroundShader, bool isProj ) {
 		auto renderPass = std::make_unique< RenderPass >();
 		renderPass->Data = static_cast< TerrainPack * >( &tPack );
-		renderPass->renderFunction = &TerrainRenderer;
+		if( !isProj ){
+			renderPass->renderFunction = &TerrainRenderer;
+		} else {
+			renderPass->renderFunction = &TerrainProjRenderer;
+		}
 		GLsizei nCount = ( GLsizei ) meshData.Indices.size();
 
 		auto drawFunct = [ nCount ]() {
@@ -297,14 +301,31 @@ namespace GL_Engine {
 										dLink.eDataIndex ) );
 			dLink.uniform->Update();
 		}
+		auto translationUniformLocation =
+			Pass.shader->getUniform( "GroundTranslation" )->GetID();
 		chunks->terrainEntity.UpdateUniforms();
-		GLuint translationUniLoc = Pass.shader->getUniform( "GroundTranslation" )->GetID();
 		for (auto chunk : chunks->TerrainChunks) {
-			glUniformMatrix4fv( translationUniLoc, 1,
+			glUniformMatrix4fv( translationUniformLocation, 1, 
 							    GL_FALSE, 
 								glm::value_ptr( chunk->Translation ) );
 			chunk->BindVAO();
 			Pass.DrawFunction();
+		}
+	}
+
+	void Terrain::TerrainProjRenderer( RenderPass &rPass, void* _data ) {
+		auto chunks = static_cast< TerrainPack* >( _data );
+
+		rPass.shader->useShader();
+		auto translationUniformLocation =
+			rPass.shader->getUniform( "GroundTranslation" )->GetID();
+
+		for ( auto chunk : chunks->TerrainChunks ) {
+			glUniformMatrix4fv( translationUniformLocation, 1, 
+							    GL_FALSE, 
+								glm::value_ptr( chunk->Translation ) );
+			chunk->BindVAO();
+			rPass.DrawFunction();
 		}
 	}
 

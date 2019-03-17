@@ -9,6 +9,7 @@ namespace GL_Engine {
 		~Renderer();
 		void Cleanup();
 
+		std::shared_ptr< RenderPass > AddRenderPass();
 		std::shared_ptr< RenderPass > AddRenderPass( Shader* _Shader );
 		std::shared_ptr< RenderPass > AddRenderPass( Shader* _Shader, std::function<void(RenderPass&, void*)> _RenderFunction, void* _Data );
 		void AddRenderPass( std::shared_ptr< RenderPass > _RPass );
