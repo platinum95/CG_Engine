@@ -106,7 +106,7 @@ namespace GL_Engine {
 
         this->dynamicFbo = std::make_unique< CG_Data::FBO >( this->fbSize, this->fbSize );
         auto depthBuffer = dynamicFbo->addAttachment(
-                             CG_Data::FBO::AttachmentType::DepthAttachment,
+                             CG_Data::FBO::AttachmentType::DepthRenderbuffer,
                              this->fbSize, this->fbSize );
 
         auto parameters = []() {
@@ -189,7 +189,7 @@ namespace GL_Engine {
     void EnvironmentMap::renderStaticMap(){
         auto fbo = CG_Data::FBO( this->fbSize, this->fbSize );
         auto depthBuffer = fbo.addAttachment(
-                             CG_Data::FBO::AttachmentType::DepthAttachment,
+                             CG_Data::FBO::AttachmentType::DepthRenderbuffer,
                              this->fbSize, this->fbSize );
         fbo.bind( 0 );
 
