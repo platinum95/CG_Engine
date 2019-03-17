@@ -97,8 +97,8 @@ namespace GL_Engine {
 		ScreenVAO->AddVBO(std::move(IndexVBO));
 
 		ProcessingFBO = std::make_unique<CG_Data::FBO>(_Width, _Height);
-		auto FragColAttach = ProcessingFBO->addAttachment(CG_Data::FBO::AttachmentType::TextureAttachment, _Width, _Height);
-		ProcessingFBO->addAttachment(CG_Data::FBO::AttachmentType::DepthAttachment, _Width, _Height);
+		auto FragColAttach = ProcessingFBO->addAttachment(CG_Data::FBO::AttachmentType::ColourTexture, _Width, _Height);
+		ProcessingFBO->addAttachment(CG_Data::FBO::AttachmentType::DepthRenderbuffer, _Width, _Height);
 		this->OutputColourBuffer = std::static_pointer_cast<CG_Data::FBO::TexturebufferObject>(FragColAttach)->GetTexture();
 		OutputColourBuffer->SetUnit(GL_TEXTURE0);
 		FragmentShader.clear();

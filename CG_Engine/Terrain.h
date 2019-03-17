@@ -51,7 +51,8 @@ namespace GL_Engine {
 		Terrain(uint32_t _MeshSize, uint32_t _DivisionCount);
 		std::shared_ptr<TerrainChunk> GenerateChunk(int xGrid, int zGrid);
 
-		std::unique_ptr<RenderPass> GetRenderPass(Shader *_GroundShader);
+		std::unique_ptr<RenderPass> GetRenderPass( Shader *_GroundShader,
+												   bool isProj=false );
 		TerrainPack tPack;
 		std::shared_ptr<CG_Data::VBO> MeshVBO, IndexVBO, TexcoordVBO;
 		MeshData meshData;
@@ -59,6 +60,7 @@ namespace GL_Engine {
 		uint32_t MeshSize, DivisionCount;
 	private:
 		static void TerrainRenderer(RenderPass &Pass, void* _Data);
+		static void TerrainProjRenderer( RenderPass &rPass, void* _data );
 	};
 
 }

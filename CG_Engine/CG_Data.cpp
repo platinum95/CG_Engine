@@ -122,6 +122,13 @@ namespace GL_Engine{
 			Initialised = true;
 		}
 
+		Texture::Texture( GLuint _id, GLuint _unit, GLenum _target ){
+			this->Target = _target;
+			this->ID = _id;
+			this->Unit = _unit;
+			this->Initialised = true;
+		}
+
 		Texture::~Texture() {
 			if (Initialised) {
 				glDeleteTextures(1, &this->ID);
@@ -247,80 +254,147 @@ namespace GL_Engine{
 
 			}
 
-			FBO::TexturebufferObject::TexturebufferObject( uint16_t _Width, uint16_t _Height, uint8_t _Unit ) {
+			FBO::TexturebufferObject::TexturebufferObject( 
+				std::shared_ptr< Texture > _tex ){
+				
+				this->ID = _tex->GetID();
+				this->TextureObject = std::move( _tex );
+			}
+
+			FBO::TexturebufferObject::TexturebufferObject( uint16_t _Width,
+														   uint16_t _Height,
+														   uint8_t _Unit ) {
 				auto parameters = []() {
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+									 GL_NEAREST );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+									 GL_NEAREST );
 				};
-				TextureObject = std::make_shared<Texture>(nullptr, _Width, _Height, GL_TEXTURE0 + _Unit, GL_RGB, parameters, GL_TEXTURE_2D);
+				TextureObject = 
+					std::make_shared< Texture >( nullptr, _Width, _Height,
+												 GL_TEXTURE0 + _Unit, GL_RGBA,
+												 parameters, GL_TEXTURE_2D );
 				this->ID = TextureObject->GetID();
 			}
 			void FBO::TexturebufferObject::TexturebufferObject::bind() const {
 
 			}
-			const std::shared_ptr<Texture> FBO::TexturebufferObject::GetTexture() const { 
+			const std::shared_ptr< Texture >
+			FBO::TexturebufferObject::GetTexture() const { 
 				return this->TextureObject; 
 			}
 		
 	
-			FBO::FBO(uint16_t _Width, uint16_t _Height) {
-				glGenFramebuffers(1, &this->ID);
+			FBO::FBO( uint16_t _Width, uint16_t _Height ) {
+				glGenFramebuffers( 1, &this->ID );
 				this->width = _Width;
 				this->height = _Height;
 				initialised = true;
 			}
 			FBO::~FBO() {
-				if (initialised) {
+				if ( initialised ) {
 					this->cleanup();
 					initialised = false;
 				}
 			}
 			void FBO::cleanup() {
-				if (initialised) {
-					glDeleteFramebuffers(1, &this->ID);
+				if ( initialised ) {
+					glDeleteFramebuffers( 1, &this->ID );
 					initialised = false;
 				}
 			}
-			std::shared_ptr<FBO::AttachmentBufferObject> FBO::addAttachment(AttachmentType _Attachment, uint16_t _Width, uint16_t _Height) {
-				glBindFramebuffer(GL_FRAMEBUFFER, this->ID);
-				glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			std::shared_ptr< FBO::AttachmentBufferObject >
+			FBO::addAttachment( AttachmentType _Attachment, uint16_t _Width,
+								uint16_t _Height ) {
+				glBindFramebuffer( GL_FRAMEBUFFER, this->ID );
+				glDrawBuffer( GL_COLOR_ATTACHMENT0 );
 				switch (_Attachment) {
-				case TextureAttachment: {
-					std::shared_ptr<TexturebufferObject> TexObj = std::make_shared<TexturebufferObject>(_Width, _Height, textureAttachmentCount);
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + textureAttachmentCount++, GL_TEXTURE_2D, TexObj->ID, 0);
-					this->attachments.push_back(std::move(TexObj));
+				case ColourTexture: {
+					std::shared_ptr< TexturebufferObject > TexObj =
+						std::make_shared< TexturebufferObject >( 
+							_Width, _Height, textureAttachmentCount );
+					glFramebufferTexture2D( GL_FRAMEBUFFER,
+											GL_COLOR_ATTACHMENT0 +
+												textureAttachmentCount++,
+											GL_TEXTURE_2D, TexObj->ID, 0 );
+					this->attachments.push_back( std::move( TexObj ) );
 					break;
 				}
-				case StencilAttachment: {
-					std::shared_ptr<RenderbufferObject> rbo = std::make_shared<RenderbufferObject>(_Width, _Height, GL_STENCIL_INDEX8);
-					glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo->ID);
-					this->attachments.push_back(std::move(rbo));
+				case DepthTexture: {
+					GLuint depthTextureId;
+					glGenTextures( 1, &depthTextureId );
+					glBindTexture( GL_TEXTURE_2D, depthTextureId );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+									 GL_NEAREST );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+									 GL_NEAREST );
+					glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32,
+								  _Width, _Height, 0, GL_DEPTH_COMPONENT,
+								  GL_FLOAT, nullptr );
+					auto depthTexture = std::make_shared< CG_Data::Texture >( 
+						depthTextureId, GL_TEXTURE0, GL_TEXTURE_2D );
+
+					glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+										  depthTexture->GetID(), 0 );
+
+					std::shared_ptr< TexturebufferObject > texObj =
+						std::make_shared< TexturebufferObject >(
+							depthTexture );
+					this->attachments.push_back( std::move( texObj ) );
 					break;
 				}
-				case DepthAttachment: {
-					std::shared_ptr<RenderbufferObject> rbo = std::make_shared<RenderbufferObject>(_Width, _Height, GL_DEPTH_COMPONENT32);
-					glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo->ID);
-					this->attachments.push_back(std::move(rbo));
+				
+				case ColourRenderbuffer: {
+					std::shared_ptr< RenderbufferObject > rbo = 
+						std::make_shared< RenderbufferObject >( 
+							_Width, _Height, GL_RGBA );
+					glFramebufferRenderbuffer( GL_FRAMEBUFFER,
+											   GL_COLOR_ATTACHMENT0,
+											   GL_RENDERBUFFER, rbo->ID );
+					this->attachments.push_back( std::move( rbo ) );
+					break;
+				}
+
+				case StencilRenderbuffer: {
+					std::shared_ptr< RenderbufferObject > rbo =
+						std::make_shared< RenderbufferObject >( 
+							_Width, _Height, GL_STENCIL_INDEX8 );
+					glFramebufferRenderbuffer( GL_FRAMEBUFFER,
+											   GL_STENCIL_ATTACHMENT,
+											   GL_RENDERBUFFER, rbo->ID );
+					this->attachments.push_back( std::move( rbo ) );
+					break;
+				}
+				case DepthRenderbuffer: {
+					std::shared_ptr< RenderbufferObject > rbo =
+						std::make_shared< RenderbufferObject >( 
+							_Width, _Height, GL_DEPTH_COMPONENT32 );
+					glFramebufferRenderbuffer( GL_FRAMEBUFFER, 
+											   GL_DEPTH_ATTACHMENT,
+											   GL_RENDERBUFFER, rbo->ID );
+					this->attachments.push_back( std::move( rbo ) );
 					break;
 				}
 				}
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+				if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == 
+						GL_FRAMEBUFFER_COMPLETE ) {
 					this->complete = true;
 				}
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				std::shared_ptr<AttachmentBufferObject> abo = attachments.back();
+				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+				std::shared_ptr< AttachmentBufferObject > abo =
+					attachments.back();
 				return abo;
 
 			}
-			void FBO::bind(uint8_t _ColourAttachment) const {
-				if (!this->complete)
+			void FBO::bind( uint8_t _ColourAttachment ) const {
+				if ( !this->complete )
 					throw std::runtime_error("Attempting to bind incomplete framebuffer!\n");
-				glBindTexture(GL_TEXTURE_2D, 0);
-				glBindFramebuffer(GL_FRAMEBUFFER, this->ID);
-				glDrawBuffer(GL_COLOR_ATTACHMENT0 + _ColourAttachment);
-				glClearColor(0.0, 0.0, 0.0, 1.0);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-				glViewport(0, 0, this->width, this->height);
+				glBindTexture( GL_TEXTURE_2D, 0 );
+				glBindFramebuffer( GL_FRAMEBUFFER, this->ID );
+				glDrawBuffer( GL_COLOR_ATTACHMENT0 + _ColourAttachment );
+				glClearColor( 0.0, 0.0, 0.0, 1.0 );
+				glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
+				glViewport( 0, 0, this->width, this->height );
 			}
 
 			void FBO::bind(uint16_t _Count, const GLenum* _ColourAttachments) const {
