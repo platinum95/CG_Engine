@@ -432,13 +432,13 @@ namespace GL_Engine{
         glGenQueries( 1, &qId );
         glBeginQuery( GL_SAMPLES_PASSED, qId );
         this->causticFbo->bind( 0 );
-        glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+        glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) ;
         //_renderer->Render();
         glDepthMask( GL_FALSE );
         glCullFace( GL_BACK );
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);  
+        glBlendFunc( GL_ONE, GL_ONE );  
         this->causticRenderer->Render();
         glDisable( GL_BLEND );
         glEndQuery( GL_SAMPLES_PASSED );
