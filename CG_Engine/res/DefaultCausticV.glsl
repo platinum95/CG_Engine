@@ -76,13 +76,13 @@ void main(){
     vec4 intersectEst = estimateIntersection( vWorldPos.xyz, refrRay );
     gl_Position = pvMatrix *\
         vec4( intersectEst.xyz, 1.0 );
-    gl_PointSize = 4;
+    gl_PointSize = 2;
     gl_Position.zw = vPosDevspace.zw;
     float texArea = 4096 * 4096;
     float dist = intersectEst.w;
     float distAtten = max( 1.0 - ( dist / 10.0 ), 0.01 );
     float surfArea = float( surfaceArea ) / texArea;
-    flux = 1;//( 1.0 - surfArea ) * (-dot( normalWorldspace, incident ));
+    flux = (-dot( normalWorldspace, incident ));
 }
 
 )==="
