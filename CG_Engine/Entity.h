@@ -188,8 +188,10 @@ namespace GL_Engine {
 		std::vector<std::string> BoneNames;
 		std::vector<std::shared_ptr<MeshBone>> meshBones;
 		std::map<std::string, unsigned int> BoneIndex;
+		const std::string getName() const;
 	private:
 		uint64_t VertexCount = 0;
+		std::string name;
 	};
 	using ModelAttribList = std::vector<std::shared_ptr<ModelAttribute>>;
 

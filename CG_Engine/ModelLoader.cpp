@@ -21,6 +21,8 @@ namespace GL_Engine {
         this->BindVAO();
         MeshIndex = TexCoordIndex = NormalIndex = IndicesIndex = -1;
         auto mesh = _Scene->mMeshes[index];
+        this->name = ( std::string ) mesh->mName.C_Str();
+        
         std::vector<unsigned int> indices;
         for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
             aiFace face = mesh->mFaces[i];
@@ -33,6 +35,7 @@ namespace GL_Engine {
         this->VBOs.push_back(std::move(indexVBO));
         this->IndicesIndex = 0;
         this->VertexCount = indices.size();
+        this->numIndices = indices.size();
         indices.clear();
 
         std::unique_ptr<VBO> meshVBO = std::make_unique<VBO>(mesh->mVertices, mesh->mNumVertices * sizeof(aiVector3D), GL_STATIC_DRAW);
@@ -104,6 +107,10 @@ namespace GL_Engine {
             }
         }
     }
+    const std::string ModelAttribute::getName() const{
+        return this->name;
+    }
+
     void ModelAttribute::AddTexture(std::shared_ptr<CG_Data::Texture> _Texture) {
         this->ModelTextures.push_back(_Texture);
     }
