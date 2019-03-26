@@ -78,6 +78,10 @@ namespace GL_Engine{
 			}
 		}
 
+		GLuint VAO::getIndexCount() const{
+			return this->numIndices;
+		}
+
 		const GLuint VAO::GetID() const{
 			return this->VAOId;
 		}

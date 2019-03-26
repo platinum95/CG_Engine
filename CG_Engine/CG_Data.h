@@ -65,8 +65,10 @@ namespace GL_Engine{
 			const GLuint GetID() const;
 			void BindVAO() const;
 			void AddVBO(std::unique_ptr<VBO> _VBO);
+			GLuint getIndexCount() const;
 		protected:
 			std::vector<std::unique_ptr<VBO>> VBOs;
+			GLuint numIndices;
 		private:
 			GLuint VAOId;
 			bool initialised{ false };

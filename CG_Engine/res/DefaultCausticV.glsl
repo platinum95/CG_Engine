@@ -76,7 +76,7 @@ void main(){
     vec4 intersectEst = estimateIntersection( vWorldPos.xyz, refrRay );
     gl_Position = pvMatrix *\
         vec4( intersectEst.xyz, 1.0 );
-    gl_PointSize = 2;
+    gl_PointSize = 1;
     gl_Position.zw = vPosDevspace.zw;
     float texArea = 4096 * 4096;
     float dist = intersectEst.w;
