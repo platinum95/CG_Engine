@@ -19,14 +19,14 @@ namespace GL_Engine {
 		std::shared_ptr<CG_Data::Texture> getTextureMap();
 		static const float vertices[24];
 		static const unsigned int indices[36];
-
+		std::shared_ptr< RenderPass >  CubeRenderPass;
 	private:
 		void CreateShader(Shader *_Shader);
 		void SetupRenderPass(Renderer *_Renderer);
 		void SetupArrayObjects();
 
 		std::shared_ptr<CG_Data::Texture> MapTexture;
-		std::shared_ptr< RenderPass >  CubeRenderPass;
+		
 		Shader *CubemapShader;
 		std::shared_ptr<CG_Data::VAO> CubemapVAO;
 

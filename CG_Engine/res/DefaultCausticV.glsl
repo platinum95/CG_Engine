@@ -59,7 +59,7 @@ void main(){
 
     vec3 incident = -cameraOrientation.xyz;
     vec3 refrRay;
-    float objRefrInd = 1.15;
+    float objRefrInd = 1.04;
     if( dot( incident, normalWorldspace ) > 0.0 ){
         // Back face
         normalWorldspace = -normalWorldspace;
@@ -76,13 +76,13 @@ void main(){
     vec4 intersectEst = estimateIntersection( vWorldPos.xyz, refrRay );
     gl_Position = pvMatrix *\
         vec4( intersectEst.xyz, 1.0 );
-    gl_PointSize = 1;
+    gl_PointSize = 15;
     gl_Position.zw = vPosDevspace.zw;
     float texArea = 4096 * 4096;
     float dist = intersectEst.w;
-    float distAtten = max( 1.0 - ( dist / 10.0 ), 0.01 );
+    float distAtten = max( 1.0 - ( dist / 2.0 ), 0.01 );
     float surfArea = float( surfaceArea ) / texArea;
-    flux = (-dot( normalWorldspace, incident ));
+    flux = distAtten;//(-dot( normalWorldspace, incident ));
 }
 
 )==="

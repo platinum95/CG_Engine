@@ -231,11 +231,13 @@ namespace GL_Engine{
     );
 
     CausticMapping::CausticMapping( uint16_t _fbWidth, uint16_t _fbHeight, 
-                                    glm::vec3 _dir, std::string _splatterPath ){
+                                    glm::vec3 _dir, float _distance,
+                                    std::string _splatterPath ){
 
         this->direction = _dir;
         this->fbWidth = _fbWidth;
         this->fbHeight = _fbHeight;
+        this->distance = _distance;
 
         this->splatterTex = 
             ModelLoader::loadTexture( _splatterPath, GL_TEXTURE1 );
@@ -295,13 +297,16 @@ namespace GL_Engine{
                 colourCausticBuffer )->GetTexture();
         colourCausticTex->SetUnit( GL_TEXTURE4 );
 
-        auto shadowCausticTexture = 
+        auto causticDepthTexture = 
             std::static_pointer_cast< CG_Data::FBO::TexturebufferObject >(
                 depthCausticBuffer )->GetTexture();
 
 
         this->textureMaps[ CausticSplatterTexture ] =
             std::move( colourCausticTex );
+
+        this->textureMaps[ CausticDepthTexture ] =
+            std::move( causticDepthTexture );
 
         this->receiverRenderer = std::make_shared< Renderer >();
         this->causticRenderer = std::make_shared< Renderer >();
@@ -419,36 +424,44 @@ namespace GL_Engine{
         return this->receiverRenderer;
     }
 
-    void CausticMapping::render( Renderer * _renderer ){
-        this->receiverFbo->bind( 0 );
+    void CausticMapping::render( Renderer * _renderer,
+                                 std::shared_ptr< Camera > _sceneCam ){
+        updateProjectionCamera( _sceneCam );
 
+        // Render receiver pass
+        this->receiverFbo->bind( 0 );
         glClearColor( 0.1f, 0.9f, 0.3f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-        //_renderer->Render()vPosLightspace;
-        glCullFace( GL_FRONT );
+        glCullFace( GL_BACK );
         this->receiverRenderer->Render();
-
         GLuint qId;
         glGenQueries( 1, &qId );
         glBeginQuery( GL_SAMPLES_PASSED, qId );
+
+        // Render caustic pass
         this->causticFbo->bind( 0 );
+        glCullFace( GL_BACK );
         glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) ;
-        //_renderer->Render();
-        glDepthMask( GL_FALSE );
-        glCullFace( GL_BACK );
+        // Disable depth discarding
+        glDepthFunc( GL_ALWAYS );
+
+        //glCullFace( GL_BACK );
         glEnable(GL_BLEND);
         glBlendFunc( GL_ONE, GL_ONE );  
+        glEnable( GL_PROGRAM_POINT_SIZE );
         this->causticRenderer->Render();
+
         glDisable( GL_BLEND );
         glEndQuery( GL_SAMPLES_PASSED );
+
         GLint samplesPassed;
         glGetQueryObjectiv( qId, GL_QUERY_RESULT, &samplesPassed );
         this->surfaceArea = ( uint32_t ) samplesPassed;
         glDeleteQueries( 1, &qId );
 
         glCullFace( GL_BACK );
-        glDepthMask( GL_TRUE );
+        glDepthFunc( GL_LESS );
         this->causticFbo->unbind();
     }
 
@@ -498,6 +511,178 @@ namespace GL_Engine{
             }
         }
 	
+    }
+
+    void CausticMapping::updateProjectionCamera( 
+            std::shared_ptr< Camera > _sceneCamera ){
+                
+        // shadowBox.update();
+        auto sceneCamForward = glm::normalize( _sceneCamera->getForwardVector() );
+        auto sceneCamUp = glm::normalize( _sceneCamera->getUpVector() );
+        auto sceneCamRight = glm::normalize( _sceneCamera->getRightVector() );
+        auto sceneCamDown = glm::normalize( -sceneCamUp );
+        auto sceneCamLeft = glm::normalize( -sceneCamRight );
+        auto sceneFarWidth = ( float ) ( this->distance * 
+            tan( glm::radians( _sceneCamera->getFov() / 2.0 ) ) );
+        auto sceneNearWidth = ( float ) ( _sceneCamera->getNearPlane() *
+            tan( glm::radians( _sceneCamera->getFov() / 2.0 ) ) );
+        auto sceneFarHeight = sceneFarWidth / _sceneCamera->getAspectRatio();
+        auto sceneNearHeight = sceneNearWidth / _sceneCamera->getAspectRatio();
+
+        auto toFar = sceneCamForward * this->distance;
+        auto toNear = sceneCamForward * _sceneCamera->getNearPlane();
+        auto centreNear = toNear + _sceneCamera->getCameraPosition();
+        auto centreFar = toFar + _sceneCamera->getCameraPosition();
+
+        auto farTop = centreFar + ( sceneCamUp * sceneFarHeight );
+        auto farBottom = centreFar + ( sceneCamDown * sceneFarHeight );
+        auto nearTop = centreNear + ( sceneCamUp * sceneNearHeight );
+        auto nearBottom = centreNear + ( sceneCamDown * sceneNearHeight );
+
+        this->mappingCamera.setCameraPosition( glm::vec3( 0.0, 0.0, 0.0 ) );
+        mappingCamera.update();
+        auto lightViewMatrix = this->mappingCamera.getViewMatrix();
+        
+        auto getLightSpaceFrustrumCorner = 
+            [ &lightViewMatrix ]
+            ( glm::vec3 _start, glm::vec3 dir, float width ) -> glm::vec3
+            {
+                auto point =
+                    glm::vec4( _start + ( dir * width ), 1.0f );
+                point = lightViewMatrix * point;
+                return glm::vec3( point );
+            };
+        glm::vec3 points[ 8 ];
+        points[ 0 ] = getLightSpaceFrustrumCorner( farTop, sceneCamRight,
+                                                        sceneFarWidth );
+        points[ 1 ] = getLightSpaceFrustrumCorner( farTop, sceneCamLeft,
+                                                        sceneFarWidth );
+        points[ 2 ] = getLightSpaceFrustrumCorner( farBottom,
+                                                        sceneCamRight,
+                                                        sceneFarWidth );
+        points[ 3 ] = getLightSpaceFrustrumCorner( farBottom, sceneCamLeft,
+                                                        sceneFarWidth );
+        points[ 4 ] = getLightSpaceFrustrumCorner( nearTop, sceneCamRight,
+                                                        sceneNearWidth );
+        points[ 5 ] = getLightSpaceFrustrumCorner( nearTop, sceneCamLeft,
+                                                        sceneNearWidth );
+        points[ 6 ] = getLightSpaceFrustrumCorner( nearBottom,
+                                                        sceneCamRight,
+                                                        sceneNearWidth );
+        points[ 7 ] = getLightSpaceFrustrumCorner( nearBottom,
+                                                sceneCamLeft,
+                                                sceneNearWidth );
+
+        float minX = points[ 0 ].x;
+        float maxX = points[ 0 ].x;
+        float minY = points[ 0 ].y;
+        float maxY = points[ 0 ].y;
+        float minZ = points[ 0 ].z;
+        float maxZ = points[ 0 ].z;
+        for( int i = 1; i < 8; i++ ){
+            auto point = points[ i ];
+
+            if( point.x > maxX ) maxX = point.x;
+            else if( point.x < minX ) minX = point.x;
+
+            if( point.y > maxY ) maxY = point.y;
+            else if( point.y < minY ) minY = point.y;
+
+            if( point.z > maxZ ) maxZ = point.z;
+            else if( point.z < minZ ) minZ = point.z;
+        }
+        //maxZ += 10.0;
+
+        auto width = maxX - minX;
+        auto height = maxY - minY;
+        auto length = maxZ - minZ;
+        
+        //updateProjectionMatrix();
+        this->projectionMatrix = glm::mat4( 1.0f );
+        projectionMatrix[ 0 ][ 0 ] = 2.0f / width;
+        projectionMatrix[ 1 ][ 1 ] = 2.0f / height;
+        projectionMatrix[ 2 ][ 2 ] = -2.0f / length;
+        projectionMatrix[ 3 ][ 3 ] = 1.0f;
+        this->projectionMatrix = glm::ortho( minX, maxX, minY, maxY, minZ, maxZ );
+        this->mappingCamera.setProjectionMatrix( projectionMatrix );
+        
+/*
+        // Get the inverse of the view transform
+        auto sceneViewMat = _sceneCamera->getViewMatrix();
+        auto sceneViewMatInv = glm::inverse( sceneViewMat );
+
+        // Get the light space tranform
+        this->mappingCamera.setCameraPosition( glm::vec3( 0.0f, 0.0f, 0.0f ) );
+        auto lightViewMat = mappingCamera.getViewMatrix();
+
+        float ar = _sceneCamera->getAspectRatio();
+        float fov = _sceneCamera->getFov();
+        float tanHalfHFOV = tan( glm::radians( fov / 2.0f ) );
+        float tanHalfVFOV = tan( glm::radians( ( fov * ar ) / 2.0f ) );
+        float sceneNearPlane = _sceneCamera->getNearPlane();
+        float sceneFarPlane = this->distance;
+        auto NUM_CASCADES = 1;
+        const auto NUM_FRUSTRUM_CORNERS = 8;
+
+        float xn = sceneNearPlane * tanHalfHFOV;
+        float xf = sceneFarPlane * tanHalfHFOV;
+        float yn = sceneNearPlane * tanHalfVFOV;
+        float yf = sceneFarPlane * tanHalfVFOV;
+
+        glm::vec4 frustumCorners[ NUM_FRUSTRUM_CORNERS ] = {
+            // near face
+            glm::vec4(xn, yn, sceneNearPlane, 1.0),
+            glm::vec4(-xn, yn, sceneNearPlane, 1.0),
+            glm::vec4(xn, -yn, sceneNearPlane, 1.0),
+            glm::vec4(-xn, -yn, sceneNearPlane, 1.0),
+
+            // far face
+            glm::vec4(xf, yf, sceneFarPlane, 1.0),
+            glm::vec4(-xf, yf, sceneFarPlane, 1.0),
+            glm::vec4(xf, -yf, sceneFarPlane, 1.0),
+            glm::vec4(-xf, -yf, sceneFarPlane, 1.0) 
+        };
+
+        glm::vec4 frustumCornersL[ NUM_FRUSTRUM_CORNERS ];
+
+        float minX = FLT_MAX;
+        float maxX = FLT_MIN;
+        float minY = FLT_MAX;
+        float maxY = FLT_MIN;
+        float minZ = FLT_MAX;
+        float maxZ = FLT_MIN;
+
+        for (uint j = 0 ; j < NUM_FRUSTRUM_CORNERS ; j++) {
+
+            // Transform the frustum coordinate from view to world space
+            glm::vec4 vW = sceneViewMatInv * frustumCorners[ j ];
+
+            // Transform the frustum coordinate from world to light space
+            frustumCornersL[ j ] = lightViewMat * vW;
+
+            minX = glm::min(minX, frustumCornersL[j].x);
+            maxX = glm::max(maxX, frustumCornersL[j].x);
+            minY = glm::min(minY, frustumCornersL[j].y);
+            maxY = glm::max(maxY, frustumCornersL[j].y);
+            minZ = glm::min(minZ, frustumCornersL[j].z);
+            maxZ = glm::max(maxZ, frustumCornersL[j].z);
+        }
+
+        this->projectionMatrix = glm::ortho( minX, maxX, minY, maxY, minZ, maxZ );
+        mappingCamera.setProjectionMatrix( projectionMatrix );
+   */
+        // updateViewMatrix();
+        auto boxCentre = glm::vec4( ( minX + maxX ) / 2.0f,
+                                    ( minY + maxY ) / 2.0f,
+                                    ( minZ + maxZ ) / 2.0f,
+                                    1.0f );
+        //boxCentre = glm::inverse( lightViewMatrix ) * boxCentre;
+        this->direction = glm::normalize( this->direction );
+        //this->mappingCamera.setCameraPosition( boxCentre );
+        this->mappingCamera.update( true );
+
+
+
     }
 
 

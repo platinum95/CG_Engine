@@ -36,6 +36,10 @@ namespace GL_Engine {
                                                    float _farPlane,
                                                    float _fov,
                                                    float _aspectRatio ){
+        this->nearPlane = _nearPlane;
+        this->farPlane = _farPlane;
+        this->fov = _fov;
+        this->aspectRatio = _aspectRatio;
         // Construct the projection matrix using GLM
         float fov_radians = glm::radians(_fov);
         this->projectionMatrix = glm::perspective( fov_radians,
@@ -168,13 +172,13 @@ namespace GL_Engine {
 
     void Camera::environDirect( GLuint direction ){
         switch( direction ){
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_X: {
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: {
                 orientation = glm::quatLookAt( glm::vec3( 1, 0, 0 ),
                                                glm::vec3( 0, -1, 0 ) );
                 break;
             }
             
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X: {
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z: {
                 orientation = glm::quatLookAt( glm::vec3( -1, 0, 0 ),
                                                glm::vec3( 0, -1, 0 ) );
                 break;
@@ -189,13 +193,13 @@ namespace GL_Engine {
                                                glm::vec3( 0, 0, -1 ) );
                 break;
             }
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: {
-                orientation = glm::quatLookAt( glm::vec3( 0, 0, 1 ),
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_X: {
+                orientation = glm::quatLookAt( glm::vec3( 0, 0, -1 ),
                                                glm::vec3( 0, -1, 0 ) );
                 break;
             }
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z: {
-                orientation = glm::quatLookAt( glm::vec3( 0, 0, -1 ),
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X: {
+                orientation = glm::quatLookAt( glm::vec3( 0, 0, 1 ),
                                                glm::vec3( 0, -1, 0 ) );
                 break;
             }
@@ -260,6 +264,14 @@ namespace GL_Engine {
         return this->forwardVector;
     }
 
+    const glm::vec3 & Camera::getUpVector() const {
+        return this->upVector;
+    }
+
+    const glm::vec3 & Camera::getRightVector() const {
+        return this->rightVector;
+    }
+
     const glm::quat & Camera::getOrientation() const {
         return this->orientation;
     }
@@ -277,16 +289,41 @@ namespace GL_Engine {
                                        glm::vec3( -cameraPosition ) );
 
         // Reset orientation vectors based on rotation matrix
-        this->forwardVector = glm::vec3( R * glm::vec4( 0, 0, 1, 0 ) );
+        this->forwardVector = glm::vec3( R * glm::vec4( 0, 0, -1, 0 ) );
         this->upVector = glm::vec3( R * glm::vec4( 0, 1, 0, 0 ) );
         this->rightVector =	glm::vec3( R * glm::vec4( 1, 0, 0, 0 ) );
 
         // Construct view matrix from translation and rotation components
-        this->viewMatrix = glm::inverse( R ) * T;
+        this->viewMatrix =  glm::inverse( R ) * T;
         this->updateViewMatrix = false;
 
         // Generate PV matrix
         this->pvMatrix = this->projectionMatrix * this->viewMatrix;
+    }
+
+    float Camera::getFarPlane(){
+        return this->farPlane;
+    }
+    float Camera::setFarPlane( float _farPlane ){
+        return this->farPlane = _farPlane;
+    }
+    float Camera::getNearPlane(){
+        return this->nearPlane;
+    }
+    float Camera::setNearPlane( float _nearPlane ){
+        return this->nearPlane = _nearPlane;
+    }
+    float Camera::getFov(){
+        return this->fov;
+    }
+    float Camera::setFov( float _fov ){
+        return this->fov = _fov;
+    }
+    float Camera::getAspectRatio(){
+        return this->aspectRatio;
+    }
+    float Camera::setAspectRatio( float _aspectRatio ){
+        return this->aspectRatio = _aspectRatio;
     }
 
 }
