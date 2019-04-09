@@ -430,6 +430,7 @@ namespace GL_Engine{
 
         // Render receiver pass
         this->receiverFbo->bind( 0 );
+  
         glClearColor( 0.1f, 0.9f, 0.3f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
         glCullFace( GL_BACK );
@@ -460,6 +461,7 @@ namespace GL_Engine{
         this->surfaceArea = ( uint32_t ) samplesPassed;
         glDeleteQueries( 1, &qId );
 
+  //      glEnable( GL_CULL_FACE );
         glCullFace( GL_BACK );
         glDepthFunc( GL_LESS );
         this->causticFbo->unbind();
@@ -591,7 +593,13 @@ namespace GL_Engine{
             if( point.z > maxZ ) maxZ = point.z;
             else if( point.z < minZ ) minZ = point.z;
         }
-        //maxZ += 10.0;
+        auto offset = 10.0f;
+        maxZ += offset;
+        minZ -= offset;
+        maxY += offset;
+        minY -= offset;
+        maxX += offset;
+        minX -= offset;
 
         auto width = maxX - minX;
         auto height = maxY - minY;
@@ -670,7 +678,7 @@ namespace GL_Engine{
 
         this->projectionMatrix = glm::ortho( minX, maxX, minY, maxY, minZ, maxZ );
         mappingCamera.setProjectionMatrix( projectionMatrix );
-   */
+*/   
         // updateViewMatrix();
         auto boxCentre = glm::vec4( ( minX + maxX ) / 2.0f,
                                     ( minY + maxY ) / 2.0f,

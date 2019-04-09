@@ -4,6 +4,7 @@
 #include "Renderer.h"
 #include "Shader.h"
 #include "Camera.h"
+#include "CgTime.h"
 
 namespace GL_Engine{
 class Water : public Entity {
@@ -34,6 +35,8 @@ private:
 
     static void defaultWaterRenderer( RenderPass & _rPass, void * _data );
     static std::vector< Water * > waterObjects;
+    Stopwatch< std::chrono::microseconds > waterStopwatch;
+    float time;
 
 };
 }

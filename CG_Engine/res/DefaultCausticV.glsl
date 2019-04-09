@@ -57,7 +57,7 @@ void main(){
         inverse( viewMatrix * modelMatrix ) ) );
     vec3 normalWorldspace = normalize( ( normalModelMatrix * vNormal ).xyz ) ;
 
-    vec3 incident = -cameraOrientation.xyz;
+    vec3 incident = cameraOrientation.xyz;
     vec3 refrRay;
     float objRefrInd = 1.04;
     if( dot( incident, normalWorldspace ) > 0.0 ){
@@ -65,24 +65,27 @@ void main(){
         normalWorldspace = -normalWorldspace;
         refrRay = normalize( refract( incident,
                                       normalWorldspace,
-                                      objRefrInd ) );
+                                      1.0/objRefrInd ) );
+     //   gl_Position = vec4( 2, 2, 2, 0 );
+     //   return;
     }else{
         // Front face
         refrRay = normalize( refract( incident,
                                       normalWorldspace,
-                                      1.0 / objRefrInd ) );
+                                      objRefrInd ) );
     }
     vec4 vPosDevspace = pvMatrix * vWorldPos;
     vec4 intersectEst = estimateIntersection( vWorldPos.xyz, refrRay );
     gl_Position = pvMatrix *\
         vec4( intersectEst.xyz, 1.0 );
-    gl_PointSize = 15;
+    float dist = distance( vWorldPos.xyz, intersectEst.xyz );
+    gl_PointSize = 5 * max( 2, dist );
     gl_Position.zw = vPosDevspace.zw;
     float texArea = 4096 * 4096;
-    float dist = intersectEst.w;
+    
     float distAtten = max( 1.0 - ( dist / 2.0 ), 0.01 );
     float surfArea = float( surfaceArea ) / texArea;
-    flux = distAtten;//(-dot( normalWorldspace, incident ));
+    flux = 1.0f;//distAtten;//(-dot( normalWorldspace, incident ));
 }
 
 )==="

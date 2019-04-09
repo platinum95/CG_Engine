@@ -12,7 +12,7 @@ void main(){
     //}
     vec4 texVal = texture( splatterTex, gl_PointCoord );
     //texVal.rgb  ;//0.4;
-    texVal.a *= 0.3 * flux;
+    texVal.a *= 0.1 * flux;
     fOut = texVal;//outCol;//vec4(1,1,1,1);
 }
 
