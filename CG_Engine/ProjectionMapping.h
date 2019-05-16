@@ -6,6 +6,7 @@
 
 namespace GL_Engine {
 
+/* Class for Shadow Mapping */
 class ProjectionMapping {
     public:
     ProjectionMapping( uint16_t _fbWidth, uint16_t _fbHeight, glm::vec3 _dir, const std::shared_ptr< CG_Data::UBO > ubo );
@@ -43,6 +44,7 @@ class ProjectionMapping {
 
 };
 
+/* Caustic Mapping Class */
 class CausticMapping {
 public:
     CausticMapping( uint16_t _fbWidth, uint16_t _fbHeight, glm::vec3 _dir,
@@ -62,7 +64,7 @@ public:
     
     std::shared_ptr< Renderer > getRenderer();
 
-    void render( Renderer * renderer, std::shared_ptr< Camera > _sceneCam );
+    void render( std::shared_ptr< Camera > _sceneCam );
     Camera mappingCamera;
     enum TextureType {
         ReceiverWorldspaceTexture, CausticSplatterTexture, CausticDepthTexture

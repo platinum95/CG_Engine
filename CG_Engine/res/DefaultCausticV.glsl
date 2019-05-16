@@ -17,9 +17,10 @@ uniform uint surfaceArea;
 out vec4 outCol;
 out float flux;
 
+// Number of Newton-Raphson iterations
 #define NUM_RP_ITER 20
 
-// Get world position from depth map
+// Get world position from receiver depth map
 vec3 texPosToWorldPos( vec2 texPos ){
     float depth = texture( receiverTex, texPos ).r;
     float z = depth * 2.0 - 1.0;
@@ -31,20 +32,17 @@ vec3 texPosToWorldPos( vec2 texPos ){
     return worldSpacePosition.xyz;
 }
 
-vec3 adjRange( vec3 inVec ){
-    return ( inVec + 1.0 ) / 2.0;
-}
 
 // Estimate the receiver intersection point from refracted ray
 vec4 estimateIntersection( vec3 vWorldPos, vec3 refrRay ){
     float dist = 1.0;
     vec3 recPos;
+    // Taken from the caustics paper (and adjusted slightly).
+    // Uses the Newton Raphson root finding algorithm
     for( int i = 0; i < NUM_RP_ITER; i++ ){
         vec3 P1 = vWorldPos + dist * refrRay;
         vec4 texPt = pvMatrix * vec4( P1, 1.0 );
-        //vec2 tc = ( texPt.xy / texPt.w + vec2( 1.0, 1.0 ) ) / 2.0;
         vec2 tc = 0.5 * texPt.xy / texPt.w + vec2( 0.5, 0.5 );
-        // tc.y = 1.0f - tc.y;
         tc = clamp( tc, 0.0, 1.0 );
         recPos = texPosToWorldPos( tc );
         dist = distance( vWorldPos, recPos );
@@ -66,8 +64,6 @@ void main(){
         refrRay = normalize( refract( incident,
                                       normalWorldspace,
                                       1.0/objRefrInd ) );
-     //   gl_Position = vec4( 2, 2, 2, 0 );
-     //   return;
     }else{
         // Front face
         refrRay = normalize( refract( incident,
@@ -75,17 +71,18 @@ void main(){
                                       objRefrInd ) );
     }
     vec4 vPosDevspace = pvMatrix * vWorldPos;
+    // Find the worldspace point at which we intersect
     vec4 intersectEst = estimateIntersection( vWorldPos.xyz, refrRay );
+    // Convert this point to our NDC
     gl_Position = pvMatrix *\
         vec4( intersectEst.xyz, 1.0 );
     float dist = distance( vWorldPos.xyz, intersectEst.xyz );
+    // Scale size based on distance to receiver
     gl_PointSize = 5 * max( 2, dist );
     gl_Position.zw = vPosDevspace.zw;
-    float texArea = 4096 * 4096;
-    
-    float distAtten = max( 1.0 - ( dist / 2.0 ), 0.01 );
-    float surfArea = float( surfaceArea ) / texArea;
-    flux = 1.0f;//distAtten;//(-dot( normalWorldspace, incident ));
+
+    // Can make estimator on this to scale the intensity
+    flux = 1.0f;
 }
 
 )==="

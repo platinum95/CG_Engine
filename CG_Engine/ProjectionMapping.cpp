@@ -54,29 +54,6 @@ namespace GL_Engine{
                                 CG_Data::FBO::AttachmentType::ColourTexture,
                                 this->fbWidth, this->fbHeight );
         
-        // GLuint shadowTextureId;
-        // glGenTextures( 1, &shadowTextureId );
-        // glBindTexture( GL_TEXTURE_2D, shadowTextureId );
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        // glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, this->fbWidth, 
-        //               this->fbHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
-        //               nullptr );
-        // auto shadowTexture = std::make_shared< CG_Data::Texture >( 
-        //     shadowTextureId, GL_TEXTURE0, GL_TEXTURE_2D );
-        // glBindFramebuffer( GL_FRAMEBUFFER, this->fbo->getID() );
-        // //this->fbo->bind(0);
-        // glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowTexture->GetID(), 0 );
-        // glDrawBuffer( GL_NONE );
-        // glReadBuffer( GL_NONE );
-        // if( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE ){
-        //     std::cerr << "FB not complete" << std::endl;
-        // }
-        // glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-        // auto colourBuffer = this->fbo->addAttachment( 
-        //                         CG_Data::FBO::AttachmentType::TextureAttachment,
-        //                         this->fbWidth, this->fbHeight );
-
         auto colourTex = 
             std::static_pointer_cast< CG_Data::FBO::TexturebufferObject >(
                 colourBuffer )->GetTexture();
@@ -195,6 +172,8 @@ namespace GL_Engine{
 
 
     /* --- Caustic Mapping class --- */
+
+    // Default receiver shaders, just get depth value
     std::string defaultReceiverVertexShaderStr = "\
     #version 330\n \
     layout (std140) uniform CameraProjectionData{ \n \
@@ -222,6 +201,7 @@ namespace GL_Engine{
     }\n \
     ";
 
+    // Inline-include for default caustic shaders
     std::string defaultCausticVertexShaderStr = std::string(
         #include "./res/DefaultCausticV.glsl"
     );
@@ -230,6 +210,7 @@ namespace GL_Engine{
         #include "./res/DefaultCausticF.glsl"
     );
 
+    // Create the caustic mapper
     CausticMapping::CausticMapping( uint16_t _fbWidth, uint16_t _fbHeight, 
                                     glm::vec3 _dir, float _distance,
                                     std::string _splatterPath ){
@@ -239,23 +220,26 @@ namespace GL_Engine{
         this->fbHeight = _fbHeight;
         this->distance = _distance;
 
+        // Load the point-texture (usually Gaussian falloff)
         this->splatterTex = 
             ModelLoader::loadTexture( _splatterPath, GL_TEXTURE1 );
 
         this->surfaceArea = 1;
-
+        // Default projection matrix
         this->projectionMatrix = glm::ortho( -50.0f, 50.0f, -50.0f, 50.0f, 
                                              1.0f, 700.5f );
         this->mappingCamera.setProjectionMatrix( this->projectionMatrix );
         this->mappingCamera.setCameraPosition( glm::vec3( 0, 2.0*12.2, 2.0*12.2 ) );
+        // Just hardcode the direction for now.
         this->mappingCamera.yawBy( 180.0f );
         this->mappingCamera.pitchBy( -45.0f );
         this->mappingCamera.initialise();
 
+        // Create the receiver FBO
         this->receiverFbo = std::make_unique< CG_Data::FBO >( fbWidth, 
                                                               fbHeight );
 
-
+        // Get the texturebuffers
         auto depthBuffer = this->receiverFbo->addAttachment(
                                 CG_Data::FBO::AttachmentType::DepthTexture,
                                 this->fbWidth, this->fbHeight );
@@ -279,11 +263,11 @@ namespace GL_Engine{
             std::move( depthTexture );
 
 
-
+        // Create the caustic FBO
         this->causticFbo = std::make_unique< CG_Data::FBO >( fbWidth, 
                                                              fbHeight );
 
-
+        // Get the texturebuffers
         auto depthCausticBuffer = this->causticFbo->addAttachment(
                                 CG_Data::FBO::AttachmentType::DepthTexture,
                                 this->fbWidth, this->fbHeight );
@@ -308,10 +292,11 @@ namespace GL_Engine{
         this->textureMaps[ CausticDepthTexture ] =
             std::move( causticDepthTexture );
 
+        // Create the two renderers
         this->receiverRenderer = std::make_shared< Renderer >();
         this->causticRenderer = std::make_shared< Renderer >();
 
-
+        // Set up the shaders and such
         auto camUbo = mappingCamera.getCameraUbo();
         receiverRenderer->AddUBO( camUbo.get() );
         causticRenderer->AddUBO( camUbo.get() );
@@ -326,7 +311,7 @@ namespace GL_Engine{
             glUniform1ui( u.GetID(), val );
         };
 
-
+        // Default shaders
         defaultShader.registerShaderStage( defaultReceiverVertexShaderStr,
                                            GL_VERTEX_SHADER );
         defaultShader.registerShaderStage( defaultReceiverFragmentShaderStr,
@@ -357,6 +342,7 @@ namespace GL_Engine{
         );
     }
     
+    // Add a receiver render pass, using the default shader
     std::shared_ptr< RenderPass > 
     CausticMapping::addReceiverPass( uint16_t _modelMatrixIdx ){
         auto rPass = 
@@ -371,6 +357,7 @@ namespace GL_Engine{
 
     }
 
+    // Add a receiver render pass, overriding the shader
     std::shared_ptr< RenderPass > 
     CausticMapping::addReceiverPass( Shader * _shader ){
         auto rp = this->receiverRenderer->AddRenderPass( _shader );
@@ -383,6 +370,7 @@ namespace GL_Engine{
         this->receiverRenderer->AddRenderPass( _renderPass );
     }
 
+    // Add a caustic render pass, using the default shader
     std::shared_ptr< RenderPass > 
     CausticMapping::addCausticPass( uint16_t _modelMatrixIdx ){
         auto rPass = 
@@ -400,6 +388,7 @@ namespace GL_Engine{
 
     }
 
+    // Add a caustic render pass, overriding the shader
     std::shared_ptr< RenderPass > 
     CausticMapping::addCausticPass( Shader * _shader ){
         auto rp = this->causticRenderer->AddRenderPass( _shader );
@@ -409,11 +398,13 @@ namespace GL_Engine{
         return std::move( rp );
     }
 
+    // Add an existing RP object to the caustic renderer
     void CausticMapping::addCausticPass( std::shared_ptr< RenderPass > 
                                            _renderPass ){
         this->causticRenderer->AddRenderPass( _renderPass );
     }
 
+    // Get the specified texture (from FBO texturebuffer)
     std::shared_ptr< CG_Data::Texture > 
     CausticMapping::getTexture( TextureType _type ){
         // Should throw an exception if the map doesn't exist
@@ -424,8 +415,8 @@ namespace GL_Engine{
         return this->receiverRenderer;
     }
 
-    void CausticMapping::render( Renderer * _renderer,
-                                 std::shared_ptr< Camera > _sceneCam ){
+    // Main Caustic mapping render function
+    void CausticMapping::render( std::shared_ptr< Camera > _sceneCam ){
         updateProjectionCamera( _sceneCam );
 
         // Render receiver pass
@@ -444,10 +435,10 @@ namespace GL_Engine{
         glCullFace( GL_BACK );
         glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) ;
-        // Disable depth discarding
+        // Disable depth discarding so the points can overlap while still
+        // keeping depth info
         glDepthFunc( GL_ALWAYS );
 
-        //glCullFace( GL_BACK );
         glEnable(GL_BLEND);
         glBlendFunc( GL_ONE, GL_ONE );  
         glEnable( GL_PROGRAM_POINT_SIZE );
@@ -461,7 +452,6 @@ namespace GL_Engine{
         this->surfaceArea = ( uint32_t ) samplesPassed;
         glDeleteQueries( 1, &qId );
 
-  //      glEnable( GL_CULL_FACE );
         glCullFace( GL_BACK );
         glDepthFunc( GL_LESS );
         this->causticFbo->unbind();
@@ -515,10 +505,12 @@ namespace GL_Engine{
 	
     }
 
+    // Update the lights view to be contained within the scene camera's view
+    // frustum. Based on code from ThinMatrix (YouTube)
     void CausticMapping::updateProjectionCamera( 
             std::shared_ptr< Camera > _sceneCamera ){
                 
-        // shadowBox.update();
+        // Start by getting the various direction vectors of the scene camera
         auto sceneCamForward = glm::normalize( _sceneCamera->getForwardVector() );
         auto sceneCamUp = glm::normalize( _sceneCamera->getUpVector() );
         auto sceneCamRight = glm::normalize( _sceneCamera->getRightVector() );
@@ -531,20 +523,25 @@ namespace GL_Engine{
         auto sceneFarHeight = sceneFarWidth / _sceneCamera->getAspectRatio();
         auto sceneNearHeight = sceneNearWidth / _sceneCamera->getAspectRatio();
 
+        // Vectors to various horizontal frustum edges
         auto toFar = sceneCamForward * this->distance;
         auto toNear = sceneCamForward * _sceneCamera->getNearPlane();
         auto centreNear = toNear + _sceneCamera->getCameraPosition();
         auto centreFar = toFar + _sceneCamera->getCameraPosition();
 
+        // Centre positions of horizontal frustum edges
         auto farTop = centreFar + ( sceneCamUp * sceneFarHeight );
         auto farBottom = centreFar + ( sceneCamDown * sceneFarHeight );
         auto nearTop = centreNear + ( sceneCamUp * sceneNearHeight );
         auto nearBottom = centreNear + ( sceneCamDown * sceneNearHeight );
 
+        // Treat camera as being at 0,0,0, move projection matrix accordingly
         this->mappingCamera.setCameraPosition( glm::vec3( 0.0, 0.0, 0.0 ) );
         mappingCamera.update();
         auto lightViewMatrix = this->mappingCamera.getViewMatrix();
         
+        // Get the frustum corner position from centre point, direction, and edge
+        // width
         auto getLightSpaceFrustrumCorner = 
             [ &lightViewMatrix ]
             ( glm::vec3 _start, glm::vec3 dir, float width ) -> glm::vec3
@@ -554,6 +551,7 @@ namespace GL_Engine{
                 point = lightViewMatrix * point;
                 return glm::vec3( point );
             };
+        // Get the points of all 8 frustum corners
         glm::vec3 points[ 8 ];
         points[ 0 ] = getLightSpaceFrustrumCorner( farTop, sceneCamRight,
                                                         sceneFarWidth );
@@ -574,7 +572,7 @@ namespace GL_Engine{
         points[ 7 ] = getLightSpaceFrustrumCorner( nearBottom,
                                                 sceneCamLeft,
                                                 sceneNearWidth );
-
+        // Find the box size thats constrained by these points
         float minX = points[ 0 ].x;
         float maxX = points[ 0 ].x;
         float minY = points[ 0 ].y;
@@ -593,6 +591,7 @@ namespace GL_Engine{
             if( point.z > maxZ ) maxZ = point.z;
             else if( point.z < minZ ) minZ = point.z;
         }
+        // Add some offset to avoid overclipping
         auto offset = 10.0f;
         maxZ += offset;
         minZ -= offset;
@@ -601,11 +600,11 @@ namespace GL_Engine{
         maxX += offset;
         minX -= offset;
 
+        // Finally, create the projection matrix
         auto width = maxX - minX;
         auto height = maxY - minY;
         auto length = maxZ - minZ;
         
-        //updateProjectionMatrix();
         this->projectionMatrix = glm::mat4( 1.0f );
         projectionMatrix[ 0 ][ 0 ] = 2.0f / width;
         projectionMatrix[ 1 ][ 1 ] = 2.0f / height;
@@ -614,79 +613,12 @@ namespace GL_Engine{
         this->projectionMatrix = glm::ortho( minX, maxX, minY, maxY, minZ, maxZ );
         this->mappingCamera.setProjectionMatrix( projectionMatrix );
         
-/*
-        // Get the inverse of the view transform
-        auto sceneViewMat = _sceneCamera->getViewMatrix();
-        auto sceneViewMatInv = glm::inverse( sceneViewMat );
-
-        // Get the light space tranform
-        this->mappingCamera.setCameraPosition( glm::vec3( 0.0f, 0.0f, 0.0f ) );
-        auto lightViewMat = mappingCamera.getViewMatrix();
-
-        float ar = _sceneCamera->getAspectRatio();
-        float fov = _sceneCamera->getFov();
-        float tanHalfHFOV = tan( glm::radians( fov / 2.0f ) );
-        float tanHalfVFOV = tan( glm::radians( ( fov * ar ) / 2.0f ) );
-        float sceneNearPlane = _sceneCamera->getNearPlane();
-        float sceneFarPlane = this->distance;
-        auto NUM_CASCADES = 1;
-        const auto NUM_FRUSTRUM_CORNERS = 8;
-
-        float xn = sceneNearPlane * tanHalfHFOV;
-        float xf = sceneFarPlane * tanHalfHFOV;
-        float yn = sceneNearPlane * tanHalfVFOV;
-        float yf = sceneFarPlane * tanHalfVFOV;
-
-        glm::vec4 frustumCorners[ NUM_FRUSTRUM_CORNERS ] = {
-            // near face
-            glm::vec4(xn, yn, sceneNearPlane, 1.0),
-            glm::vec4(-xn, yn, sceneNearPlane, 1.0),
-            glm::vec4(xn, -yn, sceneNearPlane, 1.0),
-            glm::vec4(-xn, -yn, sceneNearPlane, 1.0),
-
-            // far face
-            glm::vec4(xf, yf, sceneFarPlane, 1.0),
-            glm::vec4(-xf, yf, sceneFarPlane, 1.0),
-            glm::vec4(xf, -yf, sceneFarPlane, 1.0),
-            glm::vec4(-xf, -yf, sceneFarPlane, 1.0) 
-        };
-
-        glm::vec4 frustumCornersL[ NUM_FRUSTRUM_CORNERS ];
-
-        float minX = FLT_MAX;
-        float maxX = FLT_MIN;
-        float minY = FLT_MAX;
-        float maxY = FLT_MIN;
-        float minZ = FLT_MAX;
-        float maxZ = FLT_MIN;
-
-        for (uint j = 0 ; j < NUM_FRUSTRUM_CORNERS ; j++) {
-
-            // Transform the frustum coordinate from view to world space
-            glm::vec4 vW = sceneViewMatInv * frustumCorners[ j ];
-
-            // Transform the frustum coordinate from world to light space
-            frustumCornersL[ j ] = lightViewMat * vW;
-
-            minX = glm::min(minX, frustumCornersL[j].x);
-            maxX = glm::max(maxX, frustumCornersL[j].x);
-            minY = glm::min(minY, frustumCornersL[j].y);
-            maxY = glm::max(maxY, frustumCornersL[j].y);
-            minZ = glm::min(minZ, frustumCornersL[j].z);
-            maxZ = glm::max(maxZ, frustumCornersL[j].z);
-        }
-
-        this->projectionMatrix = glm::ortho( minX, maxX, minY, maxY, minZ, maxZ );
-        mappingCamera.setProjectionMatrix( projectionMatrix );
-*/   
-        // updateViewMatrix();
         auto boxCentre = glm::vec4( ( minX + maxX ) / 2.0f,
                                     ( minY + maxY ) / 2.0f,
                                     ( minZ + maxZ ) / 2.0f,
                                     1.0f );
-        //boxCentre = glm::inverse( lightViewMatrix ) * boxCentre;
+
         this->direction = glm::normalize( this->direction );
-        //this->mappingCamera.setCameraPosition( boxCentre );
         this->mappingCamera.update( true );
 
 
