@@ -11,11 +11,11 @@ find_package( glm REQUIRED )
 
 file( GLOB_RECURSE Eng_SOURCES "CG_Engine/*.cpp" )
 
-if ( assimp_FOUND )
-    set( ASSIMP_LIBRARY "assimp" )
-    add_library( ${ASSIMP_LIBRARY} SHARED IMPORTED )
-    set_target_properties( ${ASSIMP_LIBRARY} PROPERTIES IMPORTED_LOCATION "${ASSIMP_LIBRARY_DIRS}/libassimp.so" )
-endif( assimp_FOUND )
+#if ( assimp_FOUND )
+#    set( ASSIMP_LIBRARY "assimp" )
+#    add_library( ${ASSIMP_LIBRARY} SHARED IMPORTED )
+#    set_target_properties( ${ASSIMP_LIBRARY} PROPERTIES IMPORTED_LOCATION "${ASSIMP_LIBRARY_DIRS}/libassimp.so" )
+#endif( assimp_FOUND )
 
 add_library( CG_Engine STATIC ${Eng_SOURCES} CG_Engine/glad.c ) 
 target_link_libraries( CG_Engine glfw assimp glm dl stdc++fs )
