@@ -11,7 +11,8 @@ find_package( assimp REQUIRED )
 find_package( glm REQUIRED )
 
 file( GLOB_RECURSE Eng_SOURCES "CG_Engine/*.cpp" )
-
+file( GLOB_RECURSE Eng_HEADERS "CG_Engine/*.h" )
+file( GLOB_RECURSE Eng_GLSL "CG_Engine/*.glsl" )
 #if ( assimp_FOUND )
 #    set( ASSIMP_LIBRARY "assimp" )
 #    add_library( ${ASSIMP_LIBRARY} SHARED IMPORTED )
@@ -19,6 +20,12 @@ file( GLOB_RECURSE Eng_SOURCES "CG_Engine/*.cpp" )
 #endif( assimp_FOUND )
 
 add_library( CG_Engine STATIC ${Eng_SOURCES} CG_Engine/glad.c ) 
-target_link_libraries( CG_Engine glfw assimp glm dl stdc++fs )
+target_link_libraries( CG_Engine glfw assimp dl stdc++fs )
 include_directories( "include" )
 include_directories( "$(PROJECT_SOURCE_DIR)/CG_Engine" )
+
+install( TARGETS CG_Engine EXPORT CG_Engine DESTINATION lib )
+install( FILES ${Eng_HEADERS} ${Eng_GLSL} DESTINATION include/CG_Engine )
+install( FILES CG_EngineConfig.cmake DESTINATION lib/cmake/CG_Engine/ )
+install( EXPORT CG_Engine DESTINATION lib/cmake/CG_Engine )
+
