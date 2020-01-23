@@ -3,7 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glad/glad.h>
+#include "glad.h"
 #include <memory>
 #include "CG_Data.h"
 
