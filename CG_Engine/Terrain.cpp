@@ -2,8 +2,6 @@
 namespace GL_Engine {
 
 #pragma region TerrainGenerator
-
-
 	MeshData 
 	TerrainGenerator::CreateMesh(uint32_t MeshSize, uint32_t Divisions) {
 		std::vector<glm::vec2> Mesh;
