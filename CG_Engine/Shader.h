@@ -10,6 +10,7 @@ namespace GL_Engine{
     class Shader
     {
     public:
+        static constexpr GLuint InvalidShaderId = std::numeric_limits<GLint>::max();
 
         Shader();
         ~Shader();
@@ -18,7 +19,7 @@ namespace GL_Engine{
         const GLuint getShaderID() const;
 
         //Compile a shader stage from a source text file. Returns Shader ID
-        const uint8_t compileShader();
+        const GLuint compileShader();
 
         //Register a shader file to the pipeline
         bool registerShaderStageFromFile( 
@@ -87,7 +88,7 @@ namespace GL_Engine{
         std::map< std::string, std::unique_ptr< UboStruct > > uboBlockIndices;
         std::map< std::string, GLuint > textureLocations;
 
-        GLuint shaderID;
+        GLuint shaderID = InvalidShaderId;
         bool initialised{ false };
         const GLuint compileShaderStage( ShaderStage *stage );
     };

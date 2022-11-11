@@ -116,7 +116,7 @@ namespace GL_Engine{
 			Initialised = true;
 		}
 
-		Texture::Texture( GLuint _Unit, GLenum _Target, GLint width, GLint height, std::function<void()> _Parameters ){
+		Texture::Texture( GLuint _Unit, GLenum _Target, std::function<void()> _Parameters ){
 			glGenTextures(1, &this->ID);
 			this->Target = _Target;
 			this->Unit = _Unit;
@@ -211,7 +211,6 @@ namespace GL_Engine{
 
 #pragma region UBO
 		GLuint UBO::UBO_Count = 0;
-		UBO::UBO() {};
 		UBO::UBO(void* _Data, size_t _DataSize) {
 			this->Data = _Data;
 			this->DataSize = _DataSize;

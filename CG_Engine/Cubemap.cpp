@@ -43,13 +43,6 @@ namespace GL_Engine {
         return this->MapTexture;
     }
 
-    void Cubemap::GenerateCubemap(const std::vector<std::string> &_TextureFiles) {
-        MapTexture = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP);
-        MapTexture->Bind();
-    std::shared_ptr<CG_Data::Texture> Cubemap::getTextureMap(){
-        return this->MapTexture;
-    }
-
     void Cubemap::GenerateCubemap( const std::vector<std::filesystem::path > 
 									&_textureFiles ) {
         MapTexture = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP);
@@ -123,28 +116,28 @@ namespace GL_Engine {
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				};
  
-        this->staticColourTex = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, this->fbSize, this->fbSize, parameters );
+        this->staticColourTex = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, parameters );
         this->staticColourTex->Bind();
         for ( GLuint i = 0; i < 6; i++ ) {
             glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, this->fbSize,
                 this->fbSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr );
         }
 
-        this->dynamicColourTex = std::make_shared< CG_Data::Texture >( GL_TEXTURE0,  GL_TEXTURE_CUBE_MAP, this->fbSize, this->fbSize, parameters );
+        this->dynamicColourTex = std::make_shared< CG_Data::Texture >( GL_TEXTURE0,  GL_TEXTURE_CUBE_MAP, parameters );
         this->dynamicColourTex->Bind();
         for ( GLuint i = 0; i < 6; i++ ) {
             glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, this->fbSize,
                 this->fbSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr );
         }
 
-        this->staticDepthTex = std::make_shared< CG_Data::Texture >( GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, this->fbSize, this->fbSize, parameters );
+        this->staticDepthTex = std::make_shared< CG_Data::Texture >( GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, parameters );
         this->staticDepthTex->Bind();
         for ( GLuint i = 0; i < 6; i++ ) {
             glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, this->fbSize,
                 this->fbSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr );
         }
 
-        this->dynamicDepthTex = std::make_shared< CG_Data::Texture >( GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, this->fbSize, this->fbSize, parameters );
+        this->dynamicDepthTex = std::make_shared< CG_Data::Texture >( GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, parameters );
         this->dynamicDepthTex->Bind();
         for ( GLuint i = 0; i < 6; i++ ) {
             glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, this->fbSize,

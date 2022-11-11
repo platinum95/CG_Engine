@@ -176,7 +176,6 @@ namespace GL_Engine {
 	*/
 	class ModelAttribute : public CG_Data::VAO {
 	public:
-		ModelAttribute();
 		~ModelAttribute();
 		ModelAttribute( const aiScene *_Scene, unsigned int index, const std::string &_PathBase );
 

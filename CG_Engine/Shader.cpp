@@ -28,7 +28,7 @@ namespace GL_Engine{
         return this->shaderID;
     }
 
-    const uint8_t Shader::compileShader(){
+    const GLuint Shader::compileShader(){
         this->shaderID = glCreateProgram();
         if ( !this->shaderID ) {
             throw std::runtime_error( "Error generating Shader ID!" );
@@ -183,7 +183,7 @@ namespace GL_Engine{
 
         if ( stage->id == 0 ) {
             throw std::runtime_error( "Error creating shader stage!" );
-            return -1;
+            return InvalidShaderId;
         }
         //Bind the source to the Stage, and compile
 		const char * shaderCStr = stage->source.c_str();
@@ -198,7 +198,7 @@ namespace GL_Engine{
             glGetShaderInfoLog( stage->id, 1024, nullptr, errorBuffer );
             throw std::runtime_error( "Error compiling shader stage!\n" +
                                       std::string( errorBuffer ) );
-            return -1;
+            return InvalidShaderId;
         }
         return stage->id;
     }
@@ -224,7 +224,7 @@ namespace GL_Engine{
     Shader::getUniform( const std::string & _uName ) {
         try{
             return this->uniformMap.at( _uName );
-        } catch( const std::out_of_range & e){
+        } catch( std::out_of_range ){
             throw std::runtime_error( "Error: Uniform \"" + _uName + 
             "\" does not exist for this shader" );
         }

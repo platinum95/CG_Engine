@@ -14,7 +14,7 @@ namespace GL_Engine {
 				 Shader *_CubemapShader, Renderer *_Renderer );
 		~Cubemap();
 
-		void GenerateCubemap( const std::vector< std::filesystem::path > 
+		void GenerateCubemap( const std::vector<std::filesystem::path> 
 								& _textureFiles );
 
 		const std::shared_ptr< RenderPass > GetRenderPass() const;

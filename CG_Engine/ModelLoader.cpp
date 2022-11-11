@@ -5,9 +5,6 @@ namespace GL_Engine {
     using namespace CG_Data;
 
 #pragma region ModelAttribute
-    ModelAttribute::ModelAttribute() {
-
-    }
     ModelAttribute::~ModelAttribute() {
 
     }
@@ -35,7 +32,7 @@ namespace GL_Engine {
         this->VBOs.push_back(std::move(indexVBO));
         this->IndicesIndex = 0;
         this->VertexCount = indices.size();
-        this->numIndices = indices.size();
+        this->numIndices = static_cast<GLuint>( indices.size() );
         indices.clear();
 
         std::unique_ptr<VBO> meshVBO = std::make_unique<VBO>(mesh->mVertices, mesh->mNumVertices * sizeof(aiVector3D), GL_STATIC_DRAW);
@@ -101,7 +98,7 @@ namespace GL_Engine {
         }
 
         if( auto numCol = mesh->GetNumColorChannels() ){
-            for( int i = 0; i < numCol; i++ ){
+            for( decltype(numCol) i = 0; i < numCol; i++ ){
                 auto vCol = mesh->mColors[ i ];
 
             }
@@ -268,7 +265,7 @@ namespace GL_Engine {
             normaliseVertexData(WeightVBOData);
             std::vector<float> Weights;
             std::vector<GLuint> IDs;
-            for (auto data : WeightVBOData) {
+            for ( const auto& data : WeightVBOData ) {
                 Weights.insert(Weights.end(), { data.Weights[0],data.Weights[1], data.Weights[2], data.Weights[3] });
                 IDs.insert(IDs.end(), { data.IDs[0],data.IDs[1], data.IDs[2], data.IDs[3] });
             }
@@ -351,7 +348,7 @@ namespace GL_Engine {
                     break;
 
             }
-            const auto texture = loadTexture( texPath, texUnit );
+            auto texture = loadTexture( texPath, texUnit );
             _Textures.push_back( texture );
             cachedTextures[ texPath.generic_string()] = std::move( texture );
         }
@@ -387,8 +384,7 @@ namespace GL_Engine {
             };
         }
         std::shared_ptr<Texture> newTexture =
-            std::make_shared<Texture>( data, width, height, _Unit, format, 
-                                       parameters, GL_TEXTURE_2D );
+            std::make_shared<Texture>( data, width, height, _Unit, format, paramFunc, GL_TEXTURE_2D );
         free(data);
         //File_IO::FreeImageData(data);
         return newTexture;

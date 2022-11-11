@@ -88,7 +88,7 @@ void GL_Engine::KeyHandler::Update(GLFWwindow *window) {
 				}
 			}
 		}
-		else if (keyType->clickType == KEY_IGNORE) {
+		else if (keyType->eventType == KEY_IGNORE) {
 			if (!keyType->IsKeyDown && glfwGetKey(window, keyType->Key) == GLFW_PRESS)
 				keyType->IsKeyDown = true;
 			if (keyType->IsKeyDown && glfwGetKey(window, keyType->Key) == GLFW_RELEASE) {

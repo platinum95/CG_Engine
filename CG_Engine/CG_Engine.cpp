@@ -12,8 +12,8 @@ namespace GL_Engine{
 	CG_Engine::~CG_Engine(){
 
 	}
-	uint16_t CG_Engine::ViewportWidth = 0;
-	uint16_t CG_Engine::ViewportHeight = 0;
+	uint32_t CG_Engine::ViewportWidth = 0;
+	uint32_t CG_Engine::ViewportHeight = 0;
 
 	bool CG_Engine::CG_CreateWindow(Properties::GLFWproperties *_DisplayProperties){
 		if (!glfwInit()){

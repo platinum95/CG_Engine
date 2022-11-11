@@ -40,24 +40,22 @@ namespace GL_Engine {
 		shader.cleanup();
 	}
 	CG_Data::Uniform* PostProcessing::AddAttachment(PostprocessingAttachment _Attachment) {
-		switch (_Attachment)
-		{
-		case GaussianBlur:
-		{
+		// TODO
+		//switch (_Attachment)
+		//{
+		//case GaussianBlur:
+		//{
 			auto GaussianLambdaUpdater = [](const CG_Data::Uniform &u) {glUniform1fv(u.GetID(), 5, static_cast<const GLfloat*>(u.GetData())); };
 			auto uni = shader.registerUniform("GaussianWeights", GaussianLambdaUpdater);
 			AttachmentStringComponents[0] += "uniform float GaussianWeights[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);\n";
 			AttachmentStringComponents[1] += "BloomEffect();\n";
 			return uni.get();
-		};
-		case SaturationAdjust:
-		{
-
-		};
-
-
-		}
-
+		//};
+		//case SaturationAdjust:
+		//{
+		//
+		//};
+		//}
 	}
 
 	std::shared_ptr<CG_Data::Texture> PostProcessing::Compile(std::shared_ptr<CG_Data::Texture> _TextureInput, uint16_t _Width, uint16_t _Height) {

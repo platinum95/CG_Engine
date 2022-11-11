@@ -8,7 +8,7 @@ namespace GL_Engine{
 		~CG_Engine();
 		static bool CG_CreateWindow(Properties::GLFWproperties *_DisplayProperties);
 		static bool CG_StartGlad(Properties::GLADproperties * _GladProperties);
-		static uint16_t ViewportWidth, ViewportHeight;
+		static uint32_t ViewportWidth, ViewportHeight;
 	private:
 
 	};

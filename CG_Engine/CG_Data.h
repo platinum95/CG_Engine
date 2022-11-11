@@ -14,6 +14,8 @@
 
 namespace GL_Engine{
 	namespace CG_Data{
+		static constexpr GLuint InvalidGlId = std::numeric_limits<GLuint>::max();
+
 		/*-------------VBO Class------------*/
 		/*
 		*Handles everything to do with VBOs
@@ -40,13 +42,13 @@ namespace GL_Engine{
 
 		protected:
 			//The VBO target, e.g. GL_ARRAY_BUFFER
-			GLenum Target;
+			GLenum Target{ GL_ARRAY_BUFFER };
 
 			//The VBO usage, e.g. GL_STATIC_DRAW
-			GLenum Usage;
+			GLenum Usage{ GL_STATIC_DRAW };
 
 			//The VBO ID
-			GLuint ID;
+			GLuint ID{ InvalidGlId };
 		private:
 			//Indicates whether or not the VBO has been initialised
 			bool initialised{ false };
@@ -68,9 +70,9 @@ namespace GL_Engine{
 			GLuint getIndexCount() const;
 		protected:
 			std::vector<std::unique_ptr<VBO>> VBOs;
-			GLuint numIndices;
+			GLuint numIndices{ 0 };
 		private:
-			GLuint VAOId;
+			GLuint VAOId{ InvalidGlId };
 			bool initialised{ false };
 		};
 
@@ -83,7 +85,7 @@ namespace GL_Engine{
 		public:
 			Texture(void* _Data, GLint width, GLint height, GLuint _Unit, GLuint _ImageFormat, std::function<void()> _Parameters, GLenum _Target = GL_TEXTURE_2D);
 			Texture( GLuint _Unit, GLenum _Target );
-			Texture( GLuint _Unit, GLenum _Target, GLint width, GLint height, std::function<void()> _Parameters );
+			Texture( GLuint _Unit, GLenum _Target, std::function<void()> _Parameters );
 			Texture( GLuint _id, GLuint _unit, GLenum _target );
 			~Texture();
 			void Cleanup();
@@ -93,10 +95,10 @@ namespace GL_Engine{
 			void Bind();
 
 			const GLuint GetID() const;
-			GLuint ID;
+			GLuint ID{ InvalidGlId };
 		protected:
-			GLenum Target;
-			GLuint Unit;
+			GLenum Target{ GL_ARRAY_BUFFER };
+			GLuint Unit{ GL_TEXTURE0 };
 		private:
 			bool Initialised{ false };
 		};
@@ -124,7 +126,7 @@ namespace GL_Engine{
 		private:
 			bool NeedsUpdating{ false };
 			bool Initialised{ false };
-			const void *Data;
+			const void *Data{ nullptr };
 			GLint ID;
 			std::function<void(const CG_Data::Uniform&)> UpdateCallback;
 		};
@@ -135,7 +137,6 @@ namespace GL_Engine{
 		*/
 		class UBO : VBO {
 		public:
-			UBO();
 			UBO(void* _Data, size_t _DataSize);
 			~UBO();
 			void UpdateUBO() const;
