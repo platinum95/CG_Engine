@@ -360,7 +360,7 @@ namespace GL_Engine {
 
     std::shared_ptr<Texture>
     ModelLoader::loadTexture( const std::filesystem::path & _Path, 
-							  GLuint _Unit ){
+							  GLuint _Unit, std::function< void() > paramFunc ){
         int width, height, nChannels;
         void* data = File_IO::LoadImageFile( _Path, width, 
                                              height, nChannels, true );
@@ -380,10 +380,12 @@ namespace GL_Engine {
                 format = GL_RGBA;
                 break;
         }
-        auto parameters = []() {
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-        };
+        if (!paramFunc) {
+            paramFunc = []() {
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            };
+        }
         std::shared_ptr<Texture> newTexture =
             std::make_shared<Texture>( data, width, height, _Unit, format, 
                                        parameters, GL_TEXTURE_2D );

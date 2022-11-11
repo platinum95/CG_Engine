@@ -43,6 +43,13 @@ namespace GL_Engine {
         return this->MapTexture;
     }
 
+    void Cubemap::GenerateCubemap(const std::vector<std::string> &_TextureFiles) {
+        MapTexture = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP);
+        MapTexture->Bind();
+    std::shared_ptr<CG_Data::Texture> Cubemap::getTextureMap(){
+        return this->MapTexture;
+    }
+
     void Cubemap::GenerateCubemap( const std::vector<std::filesystem::path > 
 									&_textureFiles ) {
         MapTexture = std::make_shared<CG_Data::Texture>(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP);

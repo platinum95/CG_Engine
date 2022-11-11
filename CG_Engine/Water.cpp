@@ -43,9 +43,16 @@ Water::Water( uint16_t _fbWidth, uint16_t _fbHeight,
         glUniformMatrix4fv( u.GetID(), 1, GL_FALSE, 
                             static_cast< const GLfloat * >( u.GetData() ) );
     };
+    auto floatUniformUpdateLambda = []( const CG_Data::Uniform & u ){
+        glUniform1f( u.GetID(),
+                     *static_cast< const GLfloat * >( u.GetData() ) );
+    };
 
     auto waterModelUniform = waterShader->getUniform( "modelMatrix" );
     waterModelUniform->SetUpdateCallback( matrixUniformUpdateLambda );
+
+    auto waterTimeUniform = waterShader->getUniform( "time" );
+    waterTimeUniform->SetUpdateCallback( floatUniformUpdateLambda );
 
 
 
@@ -94,7 +101,14 @@ Water::Water( uint16_t _fbWidth, uint16_t _fbHeight,
     waterRenderPass->AddDataLink( waterModelUniform.get(),
                                   waterModelMatrixIdx );
 
+    auto waterTimeMatrixIdx = this->AddData( ( void * ) &this->time );
+    waterRenderPass->AddDataLink( waterTimeUniform.get(),
+                                  waterTimeMatrixIdx );
+
     waterObjects.push_back( this );
+
+    waterStopwatch.Initialise();
+    time = 0.0f;
 }
 
 std::shared_ptr< RenderPass > Water::getRenderPass(){
@@ -131,6 +145,10 @@ void Water::defaultWaterRenderer( RenderPass & _rPass, void * _data ){
         waterState.push_back( waterObj->isActive() );
         waterObj->Deactivate();
     }
+
+    auto frameTimeMicros = that->waterStopwatch.MeasureTime().count();
+    that->time += frameTimeMicros / 1.0e6;
+
 
     that->Deactivate();
     

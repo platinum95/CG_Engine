@@ -28,10 +28,15 @@ uniform mat4 modelMatrix;
 out vec4 ClipspaceCoord;
 out vec2 texCoords;
 
+out vec3 vPosWorldspace;
+out vec3 vCamPosWorldspace;
+
 
 void main(){
 	vec4 vertexPos = vec4( vPosition, 1 );
     vec4 vWorldPos = modelMatrix * vertexPos;
+    vPosWorldspace = vWorldPos.xyz;
+    vCamPosWorldspace = CameraPosition.xyz;
 
 	texCoords = tCoord;//vec2((vPosition.x + 1.0) / 2.0, (vPosition.z + 1.0) / 2.0);
 

@@ -3,7 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glad/glad.h>
+#include "glad.h"
 #include <memory>
 #include "CG_Data.h"
 
@@ -62,6 +62,12 @@ namespace GL_Engine {
         // Get the current forward direction of the camera
         const glm::vec3 & getForwardVector() const;
 
+        // Get the current up direction of the camera
+        const glm::vec3 & getUpVector() const;
+
+        // Get the current right direction of the camera
+        const glm::vec3 & getRightVector() const;
+
         // Get the current quaternion orientation of the camera
         const glm::quat & getOrientation() const;
 
@@ -81,6 +87,15 @@ namespace GL_Engine {
         // environment mapping
         void environDirect( GLuint direction );
 
+        float getFarPlane();
+        float setFarPlane( float _farPlane );
+        float getNearPlane();
+        float setNearPlane( float _nearPlane );
+        float getFov();
+        float setFov( float _fov );
+        float getAspectRatio();
+        float setAspectRatio( float _aspectRatio );
+
     private:
         void generateViewMatrix();
         glm::mat4 viewMatrix, projectionMatrix, pvMatrix;
@@ -95,6 +110,8 @@ namespace GL_Engine {
 
         bool updateViewMatrix{ true };
         bool updateProjMatrix{ true };
+
+        float farPlane, nearPlane, fov, aspectRatio;
 
 
 

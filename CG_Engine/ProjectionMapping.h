@@ -6,6 +6,7 @@
 
 namespace GL_Engine {
 
+/* Class for Shadow Mapping */
 class ProjectionMapping {
     public:
     ProjectionMapping( uint16_t _fbWidth, uint16_t _fbHeight, glm::vec3 _dir, const std::shared_ptr< CG_Data::UBO > ubo );
@@ -43,10 +44,11 @@ class ProjectionMapping {
 
 };
 
+/* Caustic Mapping Class */
 class CausticMapping {
-    public:
+public:
     CausticMapping( uint16_t _fbWidth, uint16_t _fbHeight, glm::vec3 _dir,
-                    std::string splatterPath );
+                    float _distance, std::string splatterPath );
 
     // Functions for receiver-object render passes
     std::shared_ptr< RenderPass >
@@ -62,15 +64,15 @@ class CausticMapping {
     
     std::shared_ptr< Renderer > getRenderer();
 
-    void render( Renderer * renderer );
+    void render( std::shared_ptr< Camera > _sceneCam );
     Camera mappingCamera;
     enum TextureType {
-        ReceiverWorldspaceTexture, CausticSplatterTexture
+        ReceiverWorldspaceTexture, CausticSplatterTexture, CausticDepthTexture
     };
 
     std::shared_ptr< CG_Data::Texture > getTexture( TextureType _type );
 
-    private:
+private:
     std::shared_ptr< Renderer > receiverRenderer, causticRenderer;
     std::unordered_map< TextureType, 
                         std::shared_ptr< CG_Data::Texture > > textureMaps;
@@ -81,6 +83,8 @@ class CausticMapping {
     static void defaultCausticRenderFunction( RenderPass& _pass, void* _data );
 
     std::shared_ptr< CG_Data::Texture > splatterTex;
+
+    void updateProjectionCamera( std::shared_ptr< Camera > _sceneCamera );
     
 
     glm::vec3 direction;
@@ -92,6 +96,7 @@ class CausticMapping {
     std::unique_ptr< CG_Data::FBO > receiverFbo, causticFbo;
 
     uint32_t surfaceArea;
+    float distance;
 
 };
 

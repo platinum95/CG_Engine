@@ -45,7 +45,7 @@ GUI::GUI( std::shared_ptr< RenderPass > _rPass,
         }
         guiShader.registerAttribute( "vPos", vPosAttribInd );
         guiShader.registerAttribute( "tPos", tPosAttribInd );
-        guiShader.registerTextureUnit( "guiTexture", 5 );
+        guiShader.registerTextureUnit( "guiTexture", 6 );
         guiShader.compileShader();
 
         _rPass->shader = &guiShader;
