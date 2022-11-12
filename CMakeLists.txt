@@ -1,31 +1,40 @@
-cmake_minimum_required( VERSION 2.8.11 )
-project( CG_Engine )
+cmake_minimum_required( VERSION 3.13 )
+project( CG_Engine VERSION 0.0.1 )
 
 set( CMAKE_CXX_STANDARD 17 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 set( OpenGL_GL_PREFERENCE "GLVND" )
 
-find_package( glfw3 3.2 REQUIRED )
-find_package( OpenGL REQUIRED )
-find_package( assimp REQUIRED )
-find_package( glm REQUIRED )
+OPTION( BUNDLED_DEPS "Link against bundled libraries." OFF )
 
-file( GLOB_RECURSE Eng_SOURCES "CG_Engine/*.cpp" )
-file( GLOB_RECURSE Eng_HEADERS "CG_Engine/*.h" )
-file( GLOB_RECURSE Eng_GLSL "CG_Engine/*.glsl" )
-#if ( assimp_FOUND )
-#    set( ASSIMP_LIBRARY "assimp" )
-#    add_library( ${ASSIMP_LIBRARY} SHARED IMPORTED )
-#    set_target_properties( ${ASSIMP_LIBRARY} PROPERTIES IMPORTED_LOCATION "${ASSIMP_LIBRARY_DIRS}/libassimp.so" )
-#endif( assimp_FOUND )
+file( GLOB_RECURSE Eng_SOURCES "src/*.cpp" )
+file( GLOB_RECURSE Eng_HEADERS "src/*.h" )
+file( GLOB_RECURSE Eng_GLSL "src/*.glsl" )
 
-add_library( CG_Engine STATIC ${Eng_SOURCES} CG_Engine/glad.c ) 
-target_link_libraries( CG_Engine glfw assimp dl stdc++fs )
-include_directories( "include" )
-include_directories( "$(PROJECT_SOURCE_DIR)/CG_Engine" )
+list( APPEND Eng_SOURCES "src/glad.c" )
 
-install( TARGETS CG_Engine EXPORT CG_Engine DESTINATION lib )
-install( FILES ${Eng_HEADERS} ${Eng_GLSL} DESTINATION include/CG_Engine )
-install( FILES CG_EngineConfig.cmake DESTINATION lib/cmake/CG_Engine/ )
-install( EXPORT CG_Engine DESTINATION lib/cmake/CG_Engine )
+add_library( CG_Engine STATIC )
+
+target_sources( CG_Engine
+	PRIVATE
+	${Eng_SOURCES}
+)
+
+if ( BUNDLED_DEPS )
+	target_include_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/External/include" )
+	list( APPEND CMAKE_LIBRARY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/External/libs" )
+	target_link_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/External/libs" )
+	find_library( glfw glfw.lib REQUIRED )
+else()
+	find_package( glfw3 3.2 REQUIRED )
+	find_package( OpenGL REQUIRED )
+	find_package( assimp REQUIRED )
+	find_package( glm REQUIRED )
+endif()
+
+target_include_directories( CG_Engine PRIVATE "include" )
+target_include_directories( CG_Engine PRIVATE "src" )
+target_include_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
+
+target_link_libraries( CG_Engine PUBLIC glfw assimp zlibstaticd )
 

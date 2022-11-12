@@ -3,6 +3,7 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+build/**
 # Compiled binary files
 **/CG_Engine*.lib
 # User-specific files
