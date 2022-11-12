@@ -34,10 +34,6 @@ else()
 	set( LIB_BUILD_DIR "release" )
 endif()
 
-function( INDIRECT func_indirect_var func_indirect_out_var )
-	set ( "${func_indirect_out_var}" "${func_indirect_var}" PARENT_SCOPE )
-endfunction()
-
 function( WIN32_FIND_LIBRARY win32_find_library_var_libname )
 	if ( CMAKE_BUILD_TYPE MATCHES "Debug|DEBUG" )
 		set( win32_find_library_var_libfilename "${win32_find_library_var_libname}d.lib" )
@@ -46,7 +42,6 @@ function( WIN32_FIND_LIBRARY win32_find_library_var_libname )
 	endif()
 
 	find_library( "${win32_find_library_var_libname}" "${win32_find_library_var_libfilename}" REQUIRED )
-	
 endfunction()
 
 if ( BUNDLED_DEPS )
@@ -68,11 +63,8 @@ else()
 	set ( assimp assimp )
 endif()
 
-
-
 target_include_directories( CG_Engine PRIVATE "include" )
 target_include_directories( CG_Engine PRIVATE "src" )
 target_include_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
 target_link_libraries( CG_Engine PUBLIC ${glfw} ${assimp} ${ADDITIONAL_LIBS} )
-
