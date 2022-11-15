@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION 3.13 )
 project( CG_Engine VERSION 0.0.1 )
 
-set( CMAKE_CXX_STANDARD 17 )
+set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 set( OpenGL_GL_PREFERENCE "GLVND" )
 
@@ -25,7 +25,7 @@ if ( UNIX )
 	set( PLATFORM_DIR "nix" )
 elseif ( WIN32 )
 	set( ADDITIONAL_LIBS zlibstaticd )
-	set( PLATFORM_DIR "win32" )
+	set( PLATFORM_DIR "win64" )
 endif()
 
 if ( CMAKE_BUILD_TYPE EQUAL "DEBUG" )
@@ -46,11 +46,12 @@ endfunction()
 
 if ( BUNDLED_DEPS )
 	target_include_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/External/include" )
-	list( APPEND CMAKE_LIBRARY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/External/libs" )
-	target_link_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/External/libs" )
+	list( APPEND CMAKE_LIBRARY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/External/libs/${PLATFORM_DIR}" )
+	target_link_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/External/libs/${PLATFORM_DIR}" )
 
 	WIN32_FIND_LIBRARY( glfw )
 	WIN32_FIND_LIBRARY( assimp )
+	WIN32_FIND_LIBRARY( openxr_loader )
 
 else()
 	find_package( glfw3 3.2 REQUIRED )
@@ -67,4 +68,4 @@ target_include_directories( CG_Engine PRIVATE "include" )
 target_include_directories( CG_Engine PRIVATE "src" )
 target_include_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-target_link_libraries( CG_Engine PUBLIC ${glfw} ${assimp} ${ADDITIONAL_LIBS} )
+target_link_libraries( CG_Engine PUBLIC ${glfw} ${assimp} ${openxr_loader} ${ADDITIONAL_LIBS} )
