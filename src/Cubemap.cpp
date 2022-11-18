@@ -193,7 +193,7 @@ namespace GL_Engine {
         auto depthBuffer = fbo.addAttachment(
                              CG_Data::FBO::AttachmentType::DepthRenderbuffer,
                              this->fbSize, this->fbSize );
-        fbo.bind( 0 );
+        auto bindToken = fbo.bind( 0 );
 
         // Render in all directions
         for( uint8_t i = 0; i < 6; i++ ){
@@ -213,13 +213,13 @@ namespace GL_Engine {
             this->staticRenderer->Render();
         }
 
-        fbo.unbind();
+        std::move( bindToken ).unbind();
         fbo.cleanup();
     }
 
     void EnvironmentMap::renderDynamicMap(){
 
-        this->dynamicFbo->bind( 0 );
+        auto bindToken = this->dynamicFbo->bind( 0 );
 
         // Render in all directions
         for( uint8_t i = 0; i < 6; i++ ){
@@ -237,8 +237,6 @@ namespace GL_Engine {
             glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
             this->dynamicRenderer->Render();
         }
-        this->dynamicFbo->unbind();
-
+        std::move( bindToken ).unbind();
     }
-
 }

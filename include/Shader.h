@@ -26,8 +26,7 @@ namespace GL_Engine{
 			const std::filesystem::path & _filePath, GLenum _stageType );
 
         //Register a shader source to the pipeline
-        void registerShaderStage( std::string _shaderSource,
-                                  GLenum _stageType );
+        void registerShaderStage( std::string &&_shaderSource, GLenum _stageType );
 
         //Register a shader attribute, to be bound at _Location
         void registerAttribute( const std::string & _attributeName,

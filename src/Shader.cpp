@@ -126,10 +126,11 @@ namespace GL_Engine{
                                       std::string( _filePath.string() ) );
         }
 
-        this->registerShaderStage( shaderText, _stageType );
+        this->registerShaderStage( std::move( shaderText ), _stageType );
         return true;
     }
-    void Shader::registerShaderStage( std::string _shaderSource,
+
+    void Shader::registerShaderStage( std::string &&_shaderSource,
                                       GLenum _stageType ){
         ShaderStage *stage = new ShaderStage;
         stage->source = std::move( _shaderSource );

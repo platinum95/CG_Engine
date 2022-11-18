@@ -1,6 +1,7 @@
 #ifndef OPENXR_COMPONENT_H
 #define OPENXR_COMPONENT_H
 
+#include <Camera.h>
 #include <CG_Data.h>
 
 #include<unknwn.h>
@@ -19,6 +20,9 @@
 #include <array>
 
 struct GLFWwindow;
+namespace GL_Engine {
+class Renderer;
+}
 
 class OpenXrComponent {
 public:
@@ -33,7 +37,10 @@ public:
 
 	void blitToSwapchain();
 
+	void render( std::array<GL_Engine::CG_Data::FBO*,2> fbos, GL_Engine::Renderer *renderer );
+
 	uint32_t fboWidth, fboHeight;
+	GL_Engine::Camera *camera;
 private:
 	bool canRender();
 
@@ -53,6 +60,8 @@ private:
 	std::array<XrCompositionLayerProjectionView,2> m_projectionLayerViews;
 	std::array<XrCompositionLayerProjection,1> m_projectionLayers;
 	XrSpace m_space;
+
+	GL_Engine::CG_Data::FBO::FramebufferBindToken bindToken;
 
 	static XrBool32 DebugLayerCallback( XrDebugUtilsMessageSeverityFlagsEXT messageSeverity, XrDebugUtilsMessageTypeFlagsEXT messageTypes, const XrDebugUtilsMessengerCallbackDataEXT *callbackData, void *userData );
 };

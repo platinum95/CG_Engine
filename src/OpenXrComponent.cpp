@@ -1,5 +1,8 @@
 #include "OpenXrComponent.h"
 
+#include <Renderer.h>
+#include <xr_linear.h>
+
 #include <algorithm>
 #include <functional>
 #include <iostream>
@@ -7,13 +10,19 @@
 #include <vector>
 #include <string_view>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
 namespace{
 
-void VerifyResult( const XrResult&& result ) {
-	if ( result != XR_SUCCESS ) {
+XrResult VerifyResult( const XrResult &&result, const std::initializer_list<XrResult> validResults = {} ) {
+	if ( result != XR_SUCCESS && std::ranges::find( validResults, result ) == validResults.end() ) {
 		// TODO
 		std::exit( -1 );
 	}
+	return result;
 }
 
 template<typename T>
@@ -111,7 +120,10 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 	getInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 
 	// Will fail if no device found (i.e. not connected)
-	VerifyResult( xrGetSystem( m_instance, &getInfo, &systemId ) );
+	if ( VerifyResult( xrGetSystem( m_instance, &getInfo, &systemId ), { XR_ERROR_FORM_FACTOR_UNAVAILABLE } ) ) {
+		// Failed to find a suitable device
+		return;
+	}
 
 	XrInstanceProperties instanceProperties{ .type = XR_TYPE_INSTANCE_PROPERTIES };
 	VerifyResult( xrGetInstanceProperties( m_instance, &instanceProperties ) );
@@ -162,7 +174,7 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 
 	auto swapchainFormats = XrEnumerateItemsFunc<XrSession>( xrEnumerateSwapchainFormats, m_session );
 
-	fboWidth = viewConfigViews[0].recommendedImageRectWidth * 2;
+	fboWidth = viewConfigViews[0].recommendedImageRectWidth;
 	fboHeight = viewConfigViews[0].recommendedImageRectHeight;
 
 	XrSwapchainCreateInfo swapchainCreateInfo{ .type = XR_TYPE_SWAPCHAIN_CREATE_INFO };
@@ -197,10 +209,10 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 		.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL,
 		.poseInReferenceSpace = {
 			.orientation = {
-				.x = 1,
+				.x = 0,
 				.y = 0,
 				.z = 0,
-				.w = 0
+				.w = 1
 			},
 			.position = {
 				.x = 0,
@@ -364,6 +376,7 @@ bool OpenXrComponent::bind() {
 	swapchainWaitInfo.timeout = XR_INFINITE_DURATION;
 	VerifyResult( xrWaitSwapchainImage( m_swapchain, &swapchainWaitInfo ) );
 
+	//bindToken = GL_Engine::CG_Data::FBO::staticBind( m_framebuffer->getID() );
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_framebuffer->getID() );
 	glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>( image.image ), 0 );
 	glDrawBuffer( GL_COLOR_ATTACHMENT0 );
@@ -392,11 +405,58 @@ void OpenXrComponent::unbind() {
 	VerifyResult( xrEndFrame( m_session, &frameEndInfo ) );
 
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
+	//std::move( bindToken ).unbind();
 }
 
 void OpenXrComponent::blitToSwapchain() {
-	if ( bind() ) {
+	if ( m_initialised && bind() ) {
 		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, 0, 0, fboWidth, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth - 400, 0, fboWidth - 400, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+		unbind();
+	}
+}
+
+void OpenXrComponent::render( std::array<GL_Engine::CG_Data::FBO *, 2> fbos, GL_Engine::Renderer *renderer ) {
+	{
+
+		auto pose = m_projectionLayerViews[0].pose;
+		auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
+		camera->setCameraOrientation( glmQuat );
+		XrMatrix4x4f proj;
+		XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_projectionLayerViews[0].fov, 0.05f, 100.0f );
+		glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
+		camera->setProjectionMatrix( *newProj );
+		const auto currentCameraPos = camera->getCameraPosition();
+		auto newCameraPos = currentCameraPos + glm::vec3( pose.position.x, pose.position.y, pose.position.z );
+		camera->setCameraPosition( newCameraPos );
+		camera->update();
+
+		auto token = fbos[0]->bind();
+		renderer->Render();
+		//camera->translateCamera( glm::vec3( 0.13f, 0.0f, 0.0f ) );
+		
+		pose = m_projectionLayerViews[1].pose;
+		glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
+		camera->setCameraOrientation( glmQuat );
+		XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_projectionLayerViews[1].fov, 0.05f, 100.0f );
+		newProj = reinterpret_cast<glm::mat4 *>( &proj );
+		camera->setProjectionMatrix( *newProj );
+		newCameraPos = currentCameraPos + glm::vec3( pose.position.x, pose.position.y, pose.position.z );
+		camera->setCameraPosition( newCameraPos );
+		camera->update();
+		token = fbos[1]->bind();
+		renderer->Render();
+
+		camera->setCameraPosition( currentCameraPos );
+		camera->update();
+
+	}
+	if ( m_initialised && bind() ) {
+		glViewport( 0, 0, fboWidth * 2, fboHeight );
+		glBindFramebuffer( GL_READ_FRAMEBUFFER, fbos[0]->getID() );
+		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, 0, 0, fboWidth, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+		glBindFramebuffer( GL_READ_FRAMEBUFFER, fbos[1]->getID() );
+		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth, 0, fboWidth *2, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
 		unbind();
 	}
 }

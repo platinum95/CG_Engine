@@ -38,6 +38,8 @@ namespace GL_Engine {
         // Move the camera tot he given position
         void setCameraPosition( const glm::vec3 &_position );
 
+        void setCameraOrientation( const glm::quat &orientation );
+
         // Move the camera by the given vector
         const glm::vec3 & translateCamera( const glm::vec3 &_Translation );
 

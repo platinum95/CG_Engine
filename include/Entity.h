@@ -75,7 +75,6 @@ namespace GL_Engine {
 	};
 
 	struct RenderPass {
-		
 		BatchUnit* AddBatchUnit(Entity* _Entity);
 		void SetDrawFunction(std::function<void(void)> _dFunc);
 		void AddDataLink(CG_Data::Uniform *_Uniform, uint16_t _DataIndex) {

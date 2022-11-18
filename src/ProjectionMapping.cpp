@@ -101,9 +101,9 @@ namespace GL_Engine{
         };
 
 
-        defaultShader.registerShaderStage( defaultVertexShaderStr,
+        defaultShader.registerShaderStage( std::string( defaultVertexShaderStr ),
                                            GL_VERTEX_SHADER );
-        defaultShader.registerShaderStage( defaultFragmentShaderStr,
+        defaultShader.registerShaderStage( std::string( defaultFragmentShaderStr ),
                                            GL_FRAGMENT_SHADER );
         defaultShader.registerAttribute( "vPosition", 0 );
         defaultShader.registerUBO( "CameraProjectionData", camUbo );
@@ -121,7 +121,7 @@ namespace GL_Engine{
                                 _modelMatrixIdx );
         }
         rPass->renderFunction = defaultRenderFunction;
-        return std::move( rPass );
+        return rPass;
 
     }
 
@@ -129,7 +129,7 @@ namespace GL_Engine{
     ProjectionMapping::addRenderPass( Shader * _shader ){
         auto rp = this->renderer->AddRenderPass( _shader );
         rp->renderFunction = defaultRenderFunction;
-        return std::move( rp );
+        return rp;
     }
 
     void ProjectionMapping::addRenderPass( std::shared_ptr< RenderPass > 
@@ -149,7 +149,7 @@ namespace GL_Engine{
     }
 
     void ProjectionMapping::render( Renderer * _renderer ){
-        this->fbo->bind( 0 );
+        auto bindToken = this->fbo->bind( 0 );
         //glViewport( 0, 0, this->fbWidth, this->fbHeight );
         //glBindFramebuffer( GL_FRAMEBUFFER, this->fbo->getID() );
 
@@ -159,7 +159,6 @@ namespace GL_Engine{
         glCullFace( GL_FRONT );
         this->renderer->Render();
         glCullFace( GL_BACK );
-        this->fbo->unbind();
     }
 
 
@@ -325,9 +324,9 @@ namespace GL_Engine{
         };
 
         // Default shaders
-        defaultShader.registerShaderStage( defaultReceiverVertexShaderStr,
+        defaultShader.registerShaderStage( std::string( defaultReceiverVertexShaderStr ),
                                            GL_VERTEX_SHADER );
-        defaultShader.registerShaderStage( defaultReceiverFragmentShaderStr,
+        defaultShader.registerShaderStage( std::string( defaultReceiverFragmentShaderStr ),
                                            GL_FRAGMENT_SHADER );
         defaultShader.registerAttribute( "vPosition", 0 );
         defaultShader.registerUBO( "CameraProjectionData", camUbo );
@@ -336,9 +335,9 @@ namespace GL_Engine{
         defaultShader.getUniform( "modelMatrix" )->SetUpdateCallback( 
                         matrixUniformUpdateLambda );
 
-        defaultCausticShader.registerShaderStage( defaultCausticVertexShaderStr,
+        defaultCausticShader.registerShaderStage( std::string( defaultCausticVertexShaderStr ),
                                            GL_VERTEX_SHADER );
-        defaultCausticShader.registerShaderStage( defaultCausticFragmentShaderStr,
+        defaultCausticShader.registerShaderStage( std::string( defaultCausticFragmentShaderStr ),
                                            GL_FRAGMENT_SHADER );
         defaultCausticShader.registerAttribute( "vPosition", 0 );
         defaultCausticShader.registerAttribute( "vNormal", 2 );
@@ -366,7 +365,7 @@ namespace GL_Engine{
         }
         
         rPass->renderFunction = defaultRenderFunction;
-        return std::move( rPass );
+        return rPass;
 
     }
 
@@ -375,7 +374,7 @@ namespace GL_Engine{
     CausticMapping::addReceiverPass( Shader * _shader ){
         auto rp = this->receiverRenderer->AddRenderPass( _shader );
         rp->renderFunction = defaultRenderFunction;
-        return std::move( rp );
+        return rp;
     }
 
     void CausticMapping::addReceiverPass( std::shared_ptr< RenderPass > 
@@ -397,7 +396,7 @@ namespace GL_Engine{
         rPass->renderFunction = defaultCausticRenderFunction;
         rPass->Textures.push_back( this->textureMaps.at( ReceiverWorldspaceTexture ) );
         rPass->Textures.push_back( this->splatterTex );
-        return std::move( rPass );
+        return rPass;
 
     }
 
@@ -408,7 +407,7 @@ namespace GL_Engine{
         rp->renderFunction = defaultCausticRenderFunction;
         rp->Textures.push_back( this->textureMaps.at( ReceiverWorldspaceTexture ) );
         rp->Textures.push_back( this->splatterTex );
-        return std::move( rp );
+        return rp;
     }
 
     // Add an existing RP object to the caustic renderer
@@ -433,7 +432,7 @@ namespace GL_Engine{
         updateProjectionCamera( _sceneCam );
 
         // Render receiver pass
-        this->receiverFbo->bind( 0 );
+        auto bindToken = this->receiverFbo->bind( 0 );
   
         glClearColor( 0.1f, 0.9f, 0.3f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -445,7 +444,7 @@ namespace GL_Engine{
         glBeginQuery( GL_SAMPLES_PASSED, qId );
 
         // Render caustic pass
-        this->causticFbo->bind( 0 );
+        bindToken = this->causticFbo->bind( 0 );
         glCullFace( GL_BACK );
         glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) ;
@@ -468,7 +467,6 @@ namespace GL_Engine{
 
         glCullFace( GL_BACK );
         glDepthFunc( GL_LESS );
-        this->causticFbo->unbind();
     }
 
 

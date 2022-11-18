@@ -16,7 +16,9 @@ namespace GL_Engine{
 			glGenBuffers(1, &this->ID);
 			Target = _Target;
 			Usage = _Usage;
-			SetVBOData(_Data, _DataSize);
+			if ( _DataSize > 0 ) {
+				SetVBOData( _Data, _DataSize );
+			}
 			initialised = true;
 		}
 
@@ -309,7 +311,7 @@ namespace GL_Engine{
 			std::shared_ptr< FBO::AttachmentBufferObject >
 			FBO::addAttachment( AttachmentType _Attachment, uint16_t _Width,
 								uint16_t _Height ) {
-				glBindFramebuffer( GL_FRAMEBUFFER, this->ID );
+				auto bindToken = staticBind( this->ID );
 				glDrawBuffer( GL_COLOR_ATTACHMENT0 );
 				switch (_Attachment) {
 				case ColourTexture: {
@@ -383,42 +385,69 @@ namespace GL_Engine{
 						GL_FRAMEBUFFER_COMPLETE ) {
 					this->complete = true;
 				}
-				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+
+				std::move( bindToken ).unbind();
+
 				std::shared_ptr< AttachmentBufferObject > abo =
 					attachments.back();
 				return abo;
 
 			}
-			void FBO::bind( uint8_t _ColourAttachment ) const {
+			FBO::FramebufferBindToken FBO::bind( uint8_t _ColourAttachment ) const {
 				if ( !this->complete )
 					throw std::runtime_error("Attempting to bind incomplete framebuffer!\n");
-				glBindTexture( GL_TEXTURE_2D, 0 );
-				glBindFramebuffer( GL_FRAMEBUFFER, this->ID );
-				glDrawBuffer( GL_COLOR_ATTACHMENT0 + _ColourAttachment );
-				glClearColor( 0.0, 0.0, 0.0, 1.0 );
-				glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
-				glViewport( 0, 0, this->width, this->height );
+
+				GLenum attachment = GL_COLOR_ATTACHMENT0 + _ColourAttachment;
+				return bind( 1, &attachment );
 			}
 
-			void FBO::bind(uint16_t _Count, const GLenum* _ColourAttachments) const {
+			FBO::FramebufferBindToken FBO::bind(uint16_t _Count, const GLenum* _ColourAttachments) const {
 				if (!this->complete)
 					throw std::runtime_error("Attempting to bind incomplete framebuffer!\n");
 				glBindTexture(GL_TEXTURE_2D, 0);
-				glBindFramebuffer(GL_FRAMEBUFFER, this->ID);
+				auto bindToken = staticBind( this->ID );
 				glClearColor(0.0, 0.0, 0.0, 1.0);
 				for (int i = 0; i < _Count; i++) {
-					glDrawBuffer(_ColourAttachments[i]);
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+					glDrawBuffer( _ColourAttachments[i] );
+					glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 				}
-				glDrawBuffers(_Count, _ColourAttachments);
-				glViewport(0, 0, this->width, this->height);
+				glDrawBuffers( _Count, _ColourAttachments );
+				glViewport( 0, 0, this->width, this->height );
+
+				return bindToken;
 			}
 			const GLuint FBO::getID() const {
 				return this->ID;
 			}
+
 			void FBO::unbind() const {
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glViewport(0, 0, CG_Engine::ViewportWidth, CG_Engine::ViewportHeight);
+				staticUnbind( this->ID );
+			}
+
+			std::list<GLuint> FBO::FramebufferStack;
+
+			FBO::FramebufferBindToken FBO::staticBind( GLuint id ) {
+				glBindFramebuffer( GL_FRAMEBUFFER, id );
+				FramebufferStack.push_back( id );
+				return FramebufferBindToken( id );
+			}
+
+			void FBO::staticUnbind( GLuint id ) {
+				const auto entry = std::find( FramebufferStack.crbegin(), FramebufferStack.crend(), id );
+				if ( entry == FramebufferStack.crend() ) {
+					throw std::runtime_error( "Attempting to unbind untracked framebuffer!\n" );
+				}
+
+				if ( entry == FramebufferStack.crbegin() ) {
+					FramebufferStack.pop_back();
+					const auto newFboIdIt = FramebufferStack.crbegin();
+					const auto newFboId = newFboIdIt == FramebufferStack.crend() ? 0 : *newFboIdIt;
+					glBindFramebuffer( GL_FRAMEBUFFER, newFboId );
+					glViewport( 0, 0, CG_Engine::ViewportWidth, CG_Engine::ViewportHeight );
+				}
+				else {
+					FramebufferStack.erase( std::next( entry ).base() );
+				}
 			}
 
 	}

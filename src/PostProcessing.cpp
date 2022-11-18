@@ -111,7 +111,7 @@ namespace GL_Engine {
 	}
 
 	void PostProcessing::Process() {
-		ProcessingFBO->bind(0);
+		auto bindToken = ProcessingFBO->bind(0);
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -127,10 +127,8 @@ namespace GL_Engine {
 
 		ScreenVAO->BindVAO();
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-		ProcessingFBO->unbind();
-
 	}
+
 	const CG_Data::FBO *PostProcessing::GetFBO() const { 
 		return this->ProcessingFBO.get(); 
 	}

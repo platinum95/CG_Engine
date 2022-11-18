@@ -28,7 +28,6 @@ std::shared_ptr<RenderPass> GL_Engine::Renderer::AddRenderPass() {
 }
 
 std::shared_ptr<RenderPass> GL_Engine::Renderer::AddRenderPass( Shader* _Shader ) {
-	
 	auto rPass =  std::make_shared<RenderPass>() ;
 	rPass->renderFunction = DefaultRenderer;
 	rPass->Data = nullptr;

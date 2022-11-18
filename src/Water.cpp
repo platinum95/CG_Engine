@@ -25,9 +25,9 @@ Water::Water( uint16_t _fbWidth, uint16_t _fbHeight,
     );
     waterShader = std::make_unique< Shader >();
     waterShader->registerShaderStage(
-        defaultWaterVertexShaderStr, GL_VERTEX_SHADER );
+        std::move( defaultWaterVertexShaderStr ), GL_VERTEX_SHADER );
 	waterShader->registerShaderStage(
-        defaultWaterFragmentShaderStr, GL_FRAGMENT_SHADER );
+        std::move( defaultWaterFragmentShaderStr ), GL_FRAGMENT_SHADER );
 	waterShader->registerAttribute( "vPosition", 0 );
     waterShader->registerAttribute( "tCoord", 1 );
 	waterShader->registerTextureUnit( "reflectionTexture", 0 );
@@ -162,7 +162,7 @@ void Water::defaultWaterRenderer( RenderPass & _rPass, void * _data ){
     camera->reflectCamera();
     camera->update();
     
-    that->waterFbo->bind( 0 );
+    auto bindToken = that->waterFbo->bind( 0 );
     for( auto & renderer : that->renderers ){
         renderer->Render();
     }
@@ -171,8 +171,8 @@ void Water::defaultWaterRenderer( RenderPass & _rPass, void * _data ){
     // Refract pass
     camUbo->clippingPlane[ 1 ] *= -1;
     camera->update();
-    that->waterFbo->bind( 1 );
-    for( auto & renderer : that->renderers ){
+    bindToken = that->waterFbo->bind( 1 );
+    for( auto &renderer : that->renderers ){
         renderer->Render();
     }
 
@@ -181,7 +181,7 @@ void Water::defaultWaterRenderer( RenderPass & _rPass, void * _data ){
             waterObjects[ i ]->Activate();
     }
 
-    that->waterFbo->unbind();
+    std::move( bindToken ).unbind();
     camUbo->clippingPlane[ 1 ] = 1000;
     glDisable( GL_CLIP_DISTANCE0 );
     that->Activate();

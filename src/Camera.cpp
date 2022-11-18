@@ -129,6 +129,17 @@ namespace GL_Engine {
         return;
     }
 
+    void Camera::setCameraOrientation( const glm::quat &orientation ) {
+        this->orientation = orientation;
+        glm::mat4 R = glm::toMat4( this->orientation );
+
+        // Reset orientation vectors based on rotation matrix
+        this->forwardVector = glm::vec3( R * glm::vec4( 0, 0, -1, 0 ) );
+        this->upVector = glm::vec3( R * glm::vec4( 0, 1, 0, 0 ) );
+        this->rightVector = glm::vec3( R * glm::vec4( 1, 0, 0, 0 ) );
+        this->updateViewMatrix = true;
+    }
+
     const glm::vec3 & 
     Camera::translateCamera( const glm::vec3 &_translation ) {
         this->cameraPosition += this->forwardVector * _translation.z;

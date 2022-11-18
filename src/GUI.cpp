@@ -34,9 +34,9 @@ GUI::GUI( std::shared_ptr< RenderPass > _rPass,
         }\n \
         ";
 
-        guiShader.registerShaderStage( defaultVertexShader, GL_VERTEX_SHADER );
+        guiShader.registerShaderStage( std::move( defaultVertexShader ), GL_VERTEX_SHADER );
         if( fragmentPath == "" ){
-            guiShader.registerShaderStage( defaultFragmentShader, 
+            guiShader.registerShaderStage( std::move( defaultFragmentShader ),
                                         GL_FRAGMENT_SHADER );
         }
         else{

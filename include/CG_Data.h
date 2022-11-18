@@ -1,5 +1,9 @@
 #pragma once
+#ifndef CG_DATA_H
+#define CG_DATA_H
+
 #include "Common.h"
+#include <glad.h>
 #include <vector>
 #include <functional>
 #include <iostream>
@@ -8,13 +12,14 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <list>
 #include <map>
 #include "File_IO.h"
 
 
 namespace GL_Engine{
 	namespace CG_Data{
-		static constexpr GLuint InvalidGlId = std::numeric_limits<GLuint>::max();
+	static constexpr GLuint InvalidGlId = -1;// std::numeric_limits<GLuint>::max();
 
 		/*-------------VBO Class------------*/
 		/*
@@ -157,6 +162,37 @@ namespace GL_Engine{
 		*/
 		class FBO {
 		public:
+			// TODO - move to a component
+			static std::list<GLuint> FramebufferStack;
+
+			class [[nodiscard]] FramebufferBindToken {
+			public:
+				FramebufferBindToken() = default;
+				FramebufferBindToken( FramebufferBindToken &&token ) = default;
+				FramebufferBindToken &operator=( FramebufferBindToken &&rhs ) {
+					std::move( this )->~FramebufferBindToken();
+					this->m_id = std::exchange( rhs.m_id, InvalidGlId );
+					return *this;
+				};
+				~FramebufferBindToken() {
+					if ( isValid() ) {
+						FBO::staticUnbind( m_id );
+						m_id = InvalidGlId;
+					}
+				}
+				bool isValid() { return m_id != InvalidGlId; }
+				void unbind() &&{ std::move( this )->~FramebufferBindToken(); }
+
+				FramebufferBindToken( const FramebufferBindToken& ) = delete;
+				FramebufferBindToken& operator=( const FramebufferBindToken& ) = delete;
+
+			private:
+				friend class FBO;
+				FramebufferBindToken( GLuint id ) : m_id( id ) {};
+
+				GLuint m_id{ InvalidGlId };
+			};
+
 			class AttachmentBufferObject {
 			public:
 				GLuint ID;
@@ -196,15 +232,18 @@ namespace GL_Engine{
 				addAttachment( AttachmentType _attachment, uint16_t _width,
 							   uint16_t _height );
 			
-			void bind( uint8_t _colourAttachment = 0 ) const;
+			FramebufferBindToken bind( uint8_t _colourAttachment = 0 ) const;
 
-			void bind( uint16_t _count, 
+			FramebufferBindToken bind( uint16_t _count,
 					   const GLenum * _colourAttachments ) const;
 			
 			const GLuint getID() const;
 			void unbind() const;
 
+			static FramebufferBindToken staticBind( GLuint id );
+
 		private:
+			static void staticUnbind( GLuint id );
 			uint16_t width, height;
 			
 
@@ -220,3 +259,5 @@ namespace GL_Engine{
 	}
 	
 }
+
+#endif // CG_DATA_H
