@@ -1,12 +1,12 @@
 #include <array>
 
 template<typename T, size_t size>
-class PrivateImp {
+class InternalObj {
 public:
-	PrivateImp() = default;
+	InternalObj() = default;
 
 	template<typename ... Args>
-	PrivateImp( Args... args ) {
+	InternalObj( Args... args ) {
 		T *member = GetMember();
 		*member = T( args... );
 	}
