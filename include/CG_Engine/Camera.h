@@ -1,11 +1,15 @@
-#pragma once
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/vec4.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include "glad.h"
-#include <memory>
+#ifndef CAMERA_H
+#define CAMERA_H
+
 #include "CG_Data.h"
+#include "glad.h"
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+
+#include <memory>
 
 namespace GL_Engine {
 
@@ -27,10 +31,7 @@ namespace GL_Engine {
         void initialise();
 
         // Create a new projection matrix based on the given parameters
-        const glm::mat4 & setProjectionMatrix( float _nearPlane, 
-                                               float _farPlane, 
-                                               float _fov, 
-                                               float _aspectRatio );
+        const glm::mat4 & setProjectionMatrix( float _nearPlane, float _farPlane, float _fov, float _aspectRatio );
 
         // Set the camera's projection matrix to the given matrix
         void setProjectionMatrix( const glm::mat4 &_projection );
@@ -44,34 +45,34 @@ namespace GL_Engine {
         const glm::vec3 & translateCamera( const glm::vec3 &_Translation );
 
         // Update the internal structures, return the given camera data
-        const std::shared_ptr< CG_Data::UBO > update( bool force=false );
+        const std::shared_ptr<CG_Data::UBO> update( bool force=false );
 
         // Get the camera UBO
-        const std::shared_ptr< CG_Data::UBO > getCameraUbo() const;
+        const std::shared_ptr<CG_Data::UBO> getCameraUbo() const;
 
         // Get the camera UBO data
-        const CameraUboData * getCameraUboData() const;
+        const CameraUboData* getCameraUboData() const;
 
-        // Get the current view matrix        
-        const glm::mat4 & getViewMatrix();
+        // Get the current view matrix
+        const glm::mat4& getViewMatrix();
 
         // Get the current projection matrix
-        const glm::mat4 & getProjectionMatrix() const;
+        const glm::mat4& getProjectionMatrix() const;
 
         // Get the current position of the camera
-        const glm::vec3 & getCameraPosition() const;
+        const glm::vec3& getCameraPosition() const;
 
         // Get the current forward direction of the camera
-        const glm::vec3 & getForwardVector() const;
+        const glm::vec3& getForwardVector() const;
 
         // Get the current up direction of the camera
-        const glm::vec3 & getUpVector() const;
+        const glm::vec3& getUpVector() const;
 
         // Get the current right direction of the camera
-        const glm::vec3 & getRightVector() const;
+        const glm::vec3& getRightVector() const;
 
         // Get the current quaternion orientation of the camera
-        const glm::quat & getOrientation() const;
+        const glm::quat& getOrientation() const;
 
         // Reflect the camera about the 0-horizontal plane
         void reflectCamera();
@@ -108,15 +109,13 @@ namespace GL_Engine {
 
         CameraUboData cameraUboData;
 
-        std::shared_ptr< CG_Data::UBO > cameraUbo;
+        std::shared_ptr<CG_Data::UBO> cameraUbo;
 
         bool updateViewMatrix{ true };
         bool updateProjMatrix{ true };
 
         float farPlane, nearPlane, fov, aspectRatio;
-
-
-
     };
 }
 
+#endif // CAMERA_H

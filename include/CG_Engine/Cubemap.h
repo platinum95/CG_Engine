@@ -1,80 +1,73 @@
-#pragma once
+#ifndef CUBEMAP_H
+#define CUBEMAP_H
 
-#include "CG_Data.h"
-#include "Renderer.h"
-#include "File_IO.h"
-#include "Shader.h"
 #include "Camera.h"
+#include "CG_Data.h"
+#include "File_IO.h"
+#include "Renderer.h"
+#include "Shader.h"
+
 #include <filesystem>
 
 namespace GL_Engine {
-	class Cubemap{
-	public:
-		Cubemap( const std::vector< std::filesystem::path > & _textureFiles,
-				 Shader *_CubemapShader, Renderer *_Renderer );
-		~Cubemap();
 
-		void GenerateCubemap( const std::vector<std::filesystem::path> 
-								& _textureFiles );
+class Cubemap {
+public:
+    Cubemap( const std::vector<std::filesystem::path> &_textureFiles, Shader *_CubemapShader, Renderer *_Renderer );
+    ~Cubemap();
 
-		const std::shared_ptr< RenderPass > GetRenderPass() const;
+    void GenerateCubemap( const std::vector<std::filesystem::path> &_textureFiles );
 
-		std::shared_ptr<CG_Data::Texture> getTextureMap();
-		static const float vertices[24];
-		static const unsigned int indices[36];
+    const std::shared_ptr<RenderPass> GetRenderPass() const;
 
-	private:
-		void CreateShader(Shader *_Shader);
-		void SetupRenderPass(Renderer *_Renderer);
-		void SetupArrayObjects();
+    std::shared_ptr<CG_Data::Texture> getTextureMap();
+    static const float vertices[24];
+    static const unsigned int indices[36];
 
-		std::shared_ptr<CG_Data::Texture> MapTexture;
-		std::shared_ptr< RenderPass >  CubeRenderPass;
-		Shader *CubemapShader;
-		std::shared_ptr<CG_Data::VAO> CubemapVAO;
+private:
+    void CreateShader( Shader *_Shader );
+    void SetupRenderPass( Renderer *_Renderer );
+    void SetupArrayObjects();
 
+    std::shared_ptr<CG_Data::Texture> MapTexture;
+    std::shared_ptr<RenderPass>  CubeRenderPass;
+    Shader *CubemapShader;
+    std::shared_ptr<CG_Data::VAO> CubemapVAO;
 
-		static void CubemapRenderer(RenderPass&, void*);
-
-
-	};
+    static void CubemapRenderer( RenderPass &, void * );
+};
 
 
-	class EnvironmentMap{
-	public:
-		EnvironmentMap( const glm::vec3 &centre, uint16_t fbSize );
+class EnvironmentMap {
+public:
+    EnvironmentMap( const glm::vec3 &centre, uint16_t fbSize );
 
-		~EnvironmentMap();
-		void cleanup();
+    ~EnvironmentMap();
+    void cleanup();
 
-		void setStaticRenderer( std::shared_ptr< Renderer > _staticRenderer );
-		void setDynamicRenderer( std::shared_ptr< Renderer > _dynamicRenderer );
+    void setStaticRenderer( std::shared_ptr<Renderer> _staticRenderer );
+    void setDynamicRenderer( std::shared_ptr<Renderer> _dynamicRenderer );
 
-		void renderStaticMap();
-		void renderDynamicMap();
+    void renderStaticMap();
+    void renderDynamicMap();
 
-		std::shared_ptr< CG_Data::Texture > getStaticTexture();
-		std::shared_ptr< CG_Data::Texture > getDynamicTexture();
+    std::shared_ptr<CG_Data::Texture> getStaticTexture();
+    std::shared_ptr<CG_Data::Texture> getDynamicTexture();
 
-		const std::shared_ptr< CG_Data::UBO > getCameraUbo() const;
-		const Camera & getCamera() const;
+    const std::shared_ptr<CG_Data::UBO> getCameraUbo() const;
+    const Camera &getCamera() const;
 
-	private:
+private:
 
-		std::shared_ptr< CG_Data::Texture > staticColourTex, staticDepthTex;
-		std::shared_ptr< CG_Data::Texture > dynamicColourTex, dynamicDepthTex;
-		std::unique_ptr< CG_Data::FBO > dynamicFbo;
+    std::shared_ptr<CG_Data::Texture> staticColourTex, staticDepthTex;
+    std::shared_ptr<CG_Data::Texture> dynamicColourTex, dynamicDepthTex;
+    std::unique_ptr<CG_Data::FBO> dynamicFbo;
 
-		uint16_t fbSize;
+    uint16_t fbSize;
 
-		std::shared_ptr< Renderer > staticRenderer, dynamicRenderer;
-		Camera envCamera;
+    std::shared_ptr<Renderer> staticRenderer, dynamicRenderer;
+    Camera envCamera;
+};
 
-
-
-
-	};
-
-}
-
-
+} // namespace GL_Engine
+#endif // CUBEMAP_H

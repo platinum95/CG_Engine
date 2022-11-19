@@ -1,3 +1,6 @@
+#ifndef INTERNAL_OBJ_H
+#define INTERNAL_OBJ_H
+
 #include <array>
 
 template<typename T, size_t size>
@@ -20,3 +23,5 @@ private:
 	}
 	std::array<uint8_t, size> m_storage;
 };
+
+#endif // INTERNAL_OBJ_H

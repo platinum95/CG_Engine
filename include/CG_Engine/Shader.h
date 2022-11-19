@@ -1,95 +1,87 @@
-#pragma once
+#ifndef SHADER_H
+#define SHADER_H
 
-#include <vector>
-#include "Common.h"
 #include "CG_Data.h"
-#include <map>
+#include "Common.h"
+
 #include <filesystem>
+#include <map>
+#include <vector>
 
-namespace GL_Engine{
-    class Shader
-    {
-    public:
-        static constexpr GLuint InvalidShaderId = std::numeric_limits<GLint>::max();
+namespace GL_Engine {
+class Shader
+{
+public:
+    static constexpr GLuint InvalidShaderId = std::numeric_limits<GLint>::max();
 
-        Shader();
-        ~Shader();
-        void cleanup();
-        
-        const GLuint getShaderID() const;
+    Shader();
+    ~Shader();
+    void cleanup();
 
-        //Compile a shader stage from a source text file. Returns Shader ID
-        const GLuint compileShader();
+    const GLuint getShaderID() const;
 
-        //Register a shader file to the pipeline
-        bool registerShaderStageFromFile( 
-			const std::filesystem::path & _filePath, GLenum _stageType );
+    //Compile a shader stage from a source text file. Returns Shader ID
+    const GLuint compileShader();
 
-        //Register a shader source to the pipeline
-        void registerShaderStage( std::string &&_shaderSource, GLenum _stageType );
+    //Register a shader file to the pipeline
+    bool registerShaderStageFromFile( const std::filesystem::path &_filePath, GLenum _stageType );
 
-        //Register a shader attribute, to be bound at _Location
-        void registerAttribute( const std::string & _attributeName,
-                                GLuint _location);
+    //Register a shader source to the pipeline
+    void registerShaderStage( std::string &&_shaderSource, GLenum _stageType );
 
-        //Register a shader attribute, to be bound at _Location
-        void registerTextureUnit( const std::string & _attributeName,
-                                  GLuint _location);
+    //Register a shader attribute, to be bound at _Location
+    void registerAttribute( const std::string &_attributeName, GLuint _location );
 
-        //Activate the program
-        void useShader() const;
+    //Register a shader attribute, to be bound at _Location
+    void registerTextureUnit( const std::string &_attributeName, GLuint _location );
 
-        //Register a Uniform.
-        //Returns pointer to UBO (Object finalised after call to compile)
-        std::shared_ptr< CG_Data::Uniform > 
-        registerUniform( const std::string & _uniformName );
+    //Activate the program
+    void useShader() const;
 
-        std::shared_ptr< CG_Data::Uniform >
-        registerUniform( const std::string & _uniformName, 
-                         std::function< void( const CG_Data::Uniform & ) > 
-                            _callbackFunction );
+    //Register a Uniform.
+    //Returns pointer to UBO (Object finalised after call to compile)
+    std::shared_ptr<CG_Data::Uniform> registerUniform( const std::string &_uniformName );
 
-        void registerUBO( const std::string &_uboName,
-                          std::shared_ptr< const CG_Data::UBO > _ubo );
-        std::shared_ptr< CG_Data::Uniform >
-        getUniform( uint8_t index ) const;
+    std::shared_ptr<CG_Data::Uniform> registerUniform( const std::string &_uniformName, std::function<void(const CG_Data::Uniform&)> _callbackFunction );
 
-        std::shared_ptr< CG_Data::Uniform > 
-        getUniform( const std::string & _uName );
+    void registerUBO( const std::string &_uboName, std::shared_ptr<const CG_Data::UBO> _ubo );
+    std::shared_ptr<CG_Data::Uniform> getUniform( uint8_t index ) const;
 
+    std::shared_ptr<CG_Data::Uniform> getUniform( const std::string &_uName );
 
-        void updateUniforms();
+    void updateUniforms();
 
-        bool isInitialised() const;
+    bool isInitialised() const;
 
-    private:
-        struct ShaderStage {
-            std::string source;
-            GLenum type;
-            GLuint id;
-        };
-        struct Attribute {
-            std::string attributeName;
-            GLuint location;
-        };
-        struct UniformStruct{
-            std::string name;
-            std::shared_ptr< CG_Data::Uniform > uniformObject;
-        };
-        struct UboStruct {
-            std::shared_ptr< const CG_Data::UBO > ubo;
-            GLuint blockIndex;
-        };
-        std::vector< ShaderStage* > shaderStages;
-        std::vector< Attribute* > attributes;
-        std::vector< UniformStruct* > uniforms;
-        std::map< std::string, std::shared_ptr< CG_Data::Uniform > > uniformMap;
-        std::map< std::string, std::unique_ptr< UboStruct > > uboBlockIndices;
-        std::map< std::string, GLuint > textureLocations;
-
-        GLuint shaderID = InvalidShaderId;
-        bool initialised{ false };
-        const GLuint compileShaderStage( ShaderStage *stage );
+private:
+    struct ShaderStage {
+        std::string source;
+        GLenum type;
+        GLuint id;
     };
+    struct Attribute {
+        std::string attributeName;
+        GLuint location;
+    };
+    struct UniformStruct {
+        std::string name;
+        std::shared_ptr< CG_Data::Uniform > uniformObject;
+    };
+    struct UboStruct {
+        std::shared_ptr< const CG_Data::UBO > ubo;
+        GLuint blockIndex;
+    };
+    std::vector<ShaderStage*> shaderStages;
+    std::vector<Attribute*> attributes;
+    std::vector<UniformStruct*> uniforms;
+    std::map<std::string, std::shared_ptr<CG_Data::Uniform>> uniformMap;
+    std::map<std::string, std::unique_ptr<UboStruct>> uboBlockIndices;
+    std::map<std::string, GLuint> textureLocations;
 
-}
+    GLuint shaderID = InvalidShaderId;
+    bool initialised{ false };
+    const GLuint compileShaderStage( ShaderStage *stage );
+};
+
+} // namespace GL_Engine
+#endif // SHADER_H

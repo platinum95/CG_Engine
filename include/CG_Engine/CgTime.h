@@ -1,4 +1,6 @@
-#pragma once
+#ifndef CG_TIME_H
+#define CG_TIME_H
+
 #include <chrono>
 
 namespace GL_Engine {
@@ -22,4 +24,4 @@ namespace GL_Engine {
 	};
 
 }
-
+#endif // CG_TIME_H
