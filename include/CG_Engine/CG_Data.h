@@ -3,7 +3,7 @@
 #define CG_DATA_H
 
 #include "Common.h"
-#include <glad.h>
+#include "glad.h"
 #include <vector>
 #include <functional>
 #include <iostream>

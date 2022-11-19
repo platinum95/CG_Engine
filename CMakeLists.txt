@@ -15,6 +15,12 @@ list( APPEND Eng_SOURCES "src/glad.c" )
 
 add_library( CG_Engine STATIC )
 
+target_sources( CG_Engine
+	PRIVATE
+	${Eng_SOURCES}
+)
+
+
 if( MSVC )
   target_compile_options( CG_Engine PRIVATE /W3 /WX)
  # add_compile_definitions( CG_Engine GLM_FORCE_CXX11 )
@@ -22,11 +28,6 @@ if( MSVC )
 else()
   target_compile_options( CG_Engine PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-
-target_sources( CG_Engine
-	PRIVATE
-	${Eng_SOURCES}
- "include/CoordinateVisualiser.h")
 
 if ( UNIX )
 	set( ADDITIONAL_LIBS dl )
@@ -72,7 +73,7 @@ else()
 	set ( assimp assimp )
 endif()
 
-target_include_directories( CG_Engine PRIVATE "include" )
+target_include_directories( CG_Engine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/CG_Engine" )
 target_include_directories( CG_Engine PRIVATE "src" )
 target_include_directories( CG_Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 

@@ -1,9 +1,10 @@
 #ifndef OPENXR_COMPONENT_H
 #define OPENXR_COMPONENT_H
 
-#include <CG_Engine/CG_Data.h>
+#include <Camera.h>
+#include <CG_Data.h>
 
-#include <unknwn.h>
+#include<unknwn.h>
 
 #define XR_USE_PLATFORM_WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -21,10 +22,6 @@
 struct GLFWwindow;
 namespace GL_Engine {
 class Renderer;
-class Camera;
-namespace CG_Data {
-class FBO;
-}
 }
 
 class OpenXrComponent {

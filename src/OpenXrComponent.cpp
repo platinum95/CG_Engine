@@ -1,7 +1,7 @@
 #include "OpenXrComponent.h"
 
-#include <Renderer.h>
-#include <xr_linear.h>
+#include "Renderer.h"
+#include "xr_linear.h"
 
 #include <algorithm>
 #include <functional>
