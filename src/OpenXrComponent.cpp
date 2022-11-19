@@ -1,5 +1,6 @@
 #include "OpenXrComponent.h"
 
+#include "Camera.h"
 #include "Renderer.h"
 #include "xr_linear.h"
 
@@ -14,6 +15,19 @@
 #include <glm/gtc/type_ptr.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
+
+#include <unknwn.h>
+
+#define XR_USE_PLATFORM_WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+#define XR_USE_GRAPHICS_API_OPENGL
+#define XR_EXTENSION_PROTOTYPES
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
 
 namespace{
 
@@ -43,7 +57,41 @@ std::vector<T> XrEnumerateItemsFunc( XrResult(*func)(Args..., uint32_t, uint32_t
 	return items;
 }
 
+XrBool32 DebugLayerCallback( XrDebugUtilsMessageSeverityFlagsEXT messageSeverity, XrDebugUtilsMessageTypeFlagsEXT messageTypes, const XrDebugUtilsMessengerCallbackDataEXT *callbackData, void *userData ) {
+	std::cout << callbackData->message << std::endl;
+	return XR_FALSE;
 }
+}
+
+//namespace OpenXrComponent {
+class OpenXrComponent::XrInternal {
+public:
+	XrInternal();
+	~XrInternal();
+
+	void test() {};
+
+//private:
+	bool m_initialised{ false };
+	XrInstance m_instance{ XR_NULL_HANDLE };
+	XrSession m_session{ XR_NULL_HANDLE };
+	XrSwapchain m_swapchain;
+	XrFrameState m_frameState;
+
+	std::vector<XrSwapchainImageOpenGLKHR> m_swapchainImages;
+	std::unique_ptr<GL_Engine::CG_Data::FBO> m_framebuffer;
+
+	XrSessionState m_sessionState{ XR_SESSION_STATE_UNKNOWN };
+
+	std::array<XrCompositionLayerProjectionView, 2> m_projectionLayerViews;
+	std::array<XrCompositionLayerProjection, 1> m_projectionLayers;
+	XrSpace m_space;
+
+	GL_Engine::CG_Data::FBO::FramebufferBindToken bindToken;
+
+	static XrBool32 DebugLayerCallback( XrDebugUtilsMessageSeverityFlagsEXT messageSeverity, XrDebugUtilsMessageTypeFlagsEXT messageTypes, const XrDebugUtilsMessengerCallbackDataEXT *callbackData, void *userData );
+};
+//}
 
 void OpenXrComponent::init( GLFWwindow *window ) {
 	auto properties = XrEnumerateItemsFunc( xrEnumerateApiLayerProperties );
@@ -111,7 +159,7 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 
 	createInfo.next = &dumci;
 
-	VerifyResult( xrCreateInstance( &createInfo, &m_instance ) );
+	VerifyResult( xrCreateInstance( &createInfo, &m_internal->m_instance ) );
 
 	XrSystemId systemId;
 	XrSystemGetInfo getInfo;
@@ -120,27 +168,27 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 	getInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 
 	// Will fail if no device found (i.e. not connected)
-	if ( VerifyResult( xrGetSystem( m_instance, &getInfo, &systemId ), { XR_ERROR_FORM_FACTOR_UNAVAILABLE } ) ) {
+	if ( VerifyResult( xrGetSystem( m_internal->m_instance, &getInfo, &systemId ), { XR_ERROR_FORM_FACTOR_UNAVAILABLE } ) ) {
 		// Failed to find a suitable device
 		return;
 	}
 
 	XrInstanceProperties instanceProperties{ .type = XR_TYPE_INSTANCE_PROPERTIES };
-	VerifyResult( xrGetInstanceProperties( m_instance, &instanceProperties ) );
+	VerifyResult( xrGetInstanceProperties( m_internal->m_instance, &instanceProperties ) );
 
 	XrSystemProperties systemProperties{ .type = XR_TYPE_SYSTEM_PROPERTIES };
-	VerifyResult( xrGetSystemProperties( m_instance, systemId, &systemProperties ) );
+	VerifyResult( xrGetSystemProperties( m_internal->m_instance, systemId, &systemProperties ) );
 
-	auto blendModes = XrEnumerateItemsFunc<XrInstance, XrSystemId, XrViewConfigurationType>( xrEnumerateEnvironmentBlendModes, m_instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO );
+	auto blendModes = XrEnumerateItemsFunc<XrInstance, XrSystemId, XrViewConfigurationType>( xrEnumerateEnvironmentBlendModes, m_internal->m_instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO );
 
-	auto viewConfigurations = XrEnumerateItemsFunc<XrInstance, XrSystemId>( xrEnumerateViewConfigurations, m_instance, systemId );
+	auto viewConfigurations = XrEnumerateItemsFunc<XrInstance, XrSystemId>( xrEnumerateViewConfigurations, m_internal->m_instance, systemId );
 
 	XrViewConfigurationProperties viewConfigProps{ .type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES };
-	VerifyResult( xrGetViewConfigurationProperties( m_instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO , &viewConfigProps ) );
+	VerifyResult( xrGetViewConfigurationProperties( m_internal->m_instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO , &viewConfigProps ) );
 	
 	auto viewConfigViews = XrEnumerateItemsFunc<XrInstance, XrSystemId, XrViewConfigurationType>( 
 		xrEnumerateViewConfigurationViews, 
-		m_instance, 
+		m_internal->m_instance, 
 		systemId, 
 		XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 
 		{ .type = XR_TYPE_VIEW_CONFIGURATION_VIEW }
@@ -152,11 +200,11 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 	//xrSuggestInteractionProfileBindings();
 
 	PFN_xrGetOpenGLGraphicsRequirementsKHR pxrGetOpenGLGraphicsRequirementsKHR;
-	xrGetInstanceProcAddr( m_instance, "xrGetOpenGLGraphicsRequirementsKHR",
+	xrGetInstanceProcAddr( m_internal->m_instance, "xrGetOpenGLGraphicsRequirementsKHR",
 		(PFN_xrVoidFunction *)&pxrGetOpenGLGraphicsRequirementsKHR );
 
 	XrGraphicsRequirementsOpenGLKHR graphicsRequirements{ .type = XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR };
-	VerifyResult( pxrGetOpenGLGraphicsRequirementsKHR( m_instance, systemId, &graphicsRequirements ) );
+	VerifyResult( pxrGetOpenGLGraphicsRequirementsKHR( m_internal->m_instance, systemId, &graphicsRequirements ) );
 
 	XrGraphicsBindingOpenGLWin32KHR gBinding;
 	gBinding.hDC = GetDC( glfwGetWin32Window( window ) );
@@ -170,9 +218,9 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 	createSessionInfo.createFlags = 0;
 	createSessionInfo.next = &gBinding;
 
-	VerifyResult( xrCreateSession( m_instance, &createSessionInfo, &m_session ) );
+	VerifyResult( xrCreateSession( m_internal->m_instance, &createSessionInfo, &m_internal->m_session ) );
 
-	auto swapchainFormats = XrEnumerateItemsFunc<XrSession>( xrEnumerateSwapchainFormats, m_session );
+	auto swapchainFormats = XrEnumerateItemsFunc<XrSession>( xrEnumerateSwapchainFormats, m_internal->m_session );
 
 	fboWidth = viewConfigViews[0].recommendedImageRectWidth;
 	fboHeight = viewConfigViews[0].recommendedImageRectHeight;
@@ -188,20 +236,20 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 	swapchainCreateInfo.arraySize = 1;
 	swapchainCreateInfo.width = viewConfigViews[0].recommendedImageRectWidth * 2;
 	swapchainCreateInfo.height = viewConfigViews[0].recommendedImageRectHeight;
-	VerifyResult( xrCreateSwapchain( m_session, &swapchainCreateInfo, &m_swapchain ) );
+	VerifyResult( xrCreateSwapchain( m_internal->m_session, &swapchainCreateInfo, &m_internal->m_swapchain ) );
 
 	uint32_t numSwapchainImages{ 0 };
-	VerifyResult( xrEnumerateSwapchainImages( m_swapchain, 0, &numSwapchainImages, nullptr ) );
+	VerifyResult( xrEnumerateSwapchainImages( m_internal->m_swapchain, 0, &numSwapchainImages, nullptr ) );
 	std::vector<XrSwapchainImageBaseHeader*> swapchainImagesBase( numSwapchainImages );
-	m_swapchainImages.resize( numSwapchainImages );
+	m_internal->m_swapchainImages.resize( numSwapchainImages );
 	for ( uint8_t i = 0; i < numSwapchainImages; ++i ) {
-		m_swapchainImages[i].type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
-		m_swapchainImages[i].next = nullptr;
-		swapchainImagesBase[i] = reinterpret_cast<XrSwapchainImageBaseHeader*>( &m_swapchainImages[i] );
+		m_internal->m_swapchainImages[i].type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
+		m_internal->m_swapchainImages[i].next = nullptr;
+		swapchainImagesBase[i] = reinterpret_cast<XrSwapchainImageBaseHeader*>( &m_internal->m_swapchainImages[i] );
 	}
-	VerifyResult( xrEnumerateSwapchainImages( m_swapchain, numSwapchainImages, &numSwapchainImages, swapchainImagesBase[0] ) );
+	VerifyResult( xrEnumerateSwapchainImages( m_internal->m_swapchain, numSwapchainImages, &numSwapchainImages, swapchainImagesBase[0] ) );
 
-	m_framebuffer = std::make_unique<GL_Engine::CG_Data::FBO>( viewConfigViews[0].recommendedImageRectWidth * 2, viewConfigViews[0].recommendedImageRectHeight );
+	m_internal->m_framebuffer = std::make_unique<GL_Engine::CG_Data::FBO>( viewConfigViews[0].recommendedImageRectWidth * 2, viewConfigViews[0].recommendedImageRectHeight );
 
 	XrReferenceSpaceCreateInfo refSpaceCreateInfo{
 		.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
@@ -222,32 +270,32 @@ void OpenXrComponent::init( GLFWwindow *window ) {
 		}
 	};
 
-	VerifyResult( xrCreateReferenceSpace( m_session, &refSpaceCreateInfo, &m_space ) );
+	VerifyResult( xrCreateReferenceSpace( m_internal->m_session, &refSpaceCreateInfo, &m_internal->m_space ) );
 
 	for ( uint8_t i = 0; i < 2; ++i ) {
-		m_projectionLayerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-		m_projectionLayerViews[i].next = nullptr;
-		m_projectionLayerViews[i].subImage.swapchain = m_swapchain;
-		m_projectionLayerViews[i].subImage.imageArrayIndex = 0;
-		m_projectionLayerViews[i].subImage.imageRect.offset.x = i == 0 ? 0 : viewConfigViews[0].recommendedImageRectWidth;
-		m_projectionLayerViews[i].subImage.imageRect.offset.y = 0;
-		m_projectionLayerViews[i].subImage.imageRect.extent.height = viewConfigViews[0].recommendedImageRectHeight;
-		m_projectionLayerViews[i].subImage.imageRect.extent.width = viewConfigViews[0].recommendedImageRectWidth;
+		m_internal->m_projectionLayerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+		m_internal->m_projectionLayerViews[i].next = nullptr;
+		m_internal->m_projectionLayerViews[i].subImage.swapchain = m_internal->m_swapchain;
+		m_internal->m_projectionLayerViews[i].subImage.imageArrayIndex = 0;
+		m_internal->m_projectionLayerViews[i].subImage.imageRect.offset.x = i == 0 ? 0 : viewConfigViews[0].recommendedImageRectWidth;
+		m_internal->m_projectionLayerViews[i].subImage.imageRect.offset.y = 0;
+		m_internal->m_projectionLayerViews[i].subImage.imageRect.extent.height = viewConfigViews[0].recommendedImageRectHeight;
+		m_internal->m_projectionLayerViews[i].subImage.imageRect.extent.width = viewConfigViews[0].recommendedImageRectWidth;
 	}
 
-	m_projectionLayers[0].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-	m_projectionLayers[0].next = nullptr;
-	m_projectionLayers[0].viewCount = 2;
-	m_projectionLayers[0].views = m_projectionLayerViews.data();
-	m_projectionLayers[0].layerFlags = 0;
-	m_projectionLayers[0].space = m_space;
+	m_internal->m_projectionLayers[0].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+	m_internal->m_projectionLayers[0].next = nullptr;
+	m_internal->m_projectionLayers[0].viewCount = 2;
+	m_internal->m_projectionLayers[0].views = m_internal->m_projectionLayerViews.data();
+	m_internal->m_projectionLayers[0].layerFlags = 0;
+	m_internal->m_projectionLayers[0].space = m_internal->m_space;
 
-	m_initialised = true;
+	m_internal->m_initialised = true;
 }
 
 void OpenXrComponent::cleanup() {
-	if ( m_instance != XR_NULL_HANDLE ) {
-		xrDestroyInstance( m_instance );
+	if ( m_internal->m_instance != XR_NULL_HANDLE ) {
+		xrDestroyInstance( m_internal->m_instance );
 	}
 }
 
@@ -258,7 +306,7 @@ void OpenXrComponent::update() {
 	while ( true ) {
 		eventData->type = XR_TYPE_EVENT_DATA_BUFFER;
 		eventData->next = nullptr;
-		auto result = xrPollEvent( m_instance, eventData );
+		auto result = xrPollEvent( m_internal->m_instance, eventData );
 		if ( result == XR_EVENT_UNAVAILABLE ) {
 			return;
 		}
@@ -288,12 +336,12 @@ void OpenXrComponent::update() {
 			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
 			{
 				auto eventData = static_cast<XrEventDataSessionStateChanged *>( (void *)buffer );
-				m_sessionState = eventData->state;
-				if ( m_sessionState == XR_SESSION_STATE_READY ) {
+				m_internal->m_sessionState = eventData->state;
+				if ( m_internal->m_sessionState == XR_SESSION_STATE_READY ) {
 					XrSessionBeginInfo beginInfo{ .type = XR_TYPE_SESSION_BEGIN_INFO };
 					beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 					beginInfo.next = nullptr;
-					VerifyResult( xrBeginSession( m_session, &beginInfo ) );
+					VerifyResult( xrBeginSession( m_internal->m_session, &beginInfo ) );
 					break;
 				}
 			}
@@ -302,7 +350,7 @@ void OpenXrComponent::update() {
 }
 
 bool OpenXrComponent::canRender() {
-	switch ( m_sessionState ) {
+	switch ( m_internal->m_sessionState ) {
 		case XR_SESSION_STATE_READY:
 		case XR_SESSION_STATE_FOCUSED:
 		case XR_SESSION_STATE_VISIBLE:
@@ -327,57 +375,57 @@ bool OpenXrComponent::bind() {
 
 	XrFrameWaitInfo frameWaitInfo{ .type = XR_TYPE_FRAME_WAIT_INFO };
 	frameWaitInfo.next = nullptr;
-	m_frameState.next = nullptr;
-	m_frameState.type = XR_TYPE_FRAME_STATE;
-	auto waitFrameResult = xrWaitFrame( m_session, &frameWaitInfo, &m_frameState );
+	m_internal->m_frameState.next = nullptr;
+	m_internal->m_frameState.type = XR_TYPE_FRAME_STATE;
+	auto waitFrameResult = xrWaitFrame( m_internal->m_session, &frameWaitInfo, &m_internal->m_frameState );
 	if ( waitFrameResult != XR_EVENT_UNAVAILABLE && waitFrameResult != XR_SUCCESS ) {
 		std::exit( -1 );
 	}
 
 	XrFrameBeginInfo frameBeginInfo{ .type = XR_TYPE_FRAME_BEGIN_INFO };
 	frameBeginInfo.next = nullptr;
-	VerifyResult( xrBeginFrame( m_session, &frameBeginInfo ) );
+	VerifyResult( xrBeginFrame( m_internal->m_session, &frameBeginInfo ) );
 
-	if ( !m_frameState.shouldRender ) {
+	if ( !m_internal->m_frameState.shouldRender ) {
 		XrFrameEndInfo frameEndInfo{ .type = XR_TYPE_FRAME_END_INFO };
 		frameEndInfo.next = nullptr;
-		frameEndInfo.displayTime = m_frameState.predictedDisplayTime;
+		frameEndInfo.displayTime = m_internal->m_frameState.predictedDisplayTime;
 		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 		frameEndInfo.layerCount = 0;
 		frameEndInfo.layers = nullptr;
 
-		VerifyResult( xrEndFrame( m_session, &frameEndInfo ) );
+		VerifyResult( xrEndFrame( m_internal->m_session, &frameEndInfo ) );
 		return false;
 	}
 
 	XrViewLocateInfo viewLocateInfo{ .type = XR_TYPE_VIEW_LOCATE_INFO };
 	viewLocateInfo.next = nullptr;
-	viewLocateInfo.displayTime = m_frameState.predictedDisplayTime;
-	viewLocateInfo.space = m_space;
+	viewLocateInfo.displayTime = m_internal->m_frameState.predictedDisplayTime;
+	viewLocateInfo.space = m_internal->m_space;
 	viewLocateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 	XrViewState viewState{ .type = XR_TYPE_VIEW_STATE };
 
-	const auto views = XrEnumerateItemsFunc<XrSession, const XrViewLocateInfo *, XrViewState *>( xrLocateViews, m_session, &viewLocateInfo, &viewState, { .type = XR_TYPE_VIEW } );
+	const auto views = XrEnumerateItemsFunc<XrSession, const XrViewLocateInfo *, XrViewState *>( xrLocateViews, m_internal->m_session, &viewLocateInfo, &viewState, { .type = XR_TYPE_VIEW } );
 	for ( uint8_t i = 0; i < 2; ++i ) {
-		m_projectionLayerViews[i].fov = views[i].fov;
-		m_projectionLayerViews[i].pose = views[i].pose;
+		m_internal->m_projectionLayerViews[i].fov = views[i].fov;
+		m_internal->m_projectionLayerViews[i].pose = views[i].pose;
 	}
 
 	XrSwapchainImageAcquireInfo acquireInfo{ .type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
 	acquireInfo.next = nullptr;
 
 	uint32_t index{ 0 };
-	VerifyResult( xrAcquireSwapchainImage( m_swapchain, &acquireInfo, &index ) );
-	auto image = m_swapchainImages[index];
+	VerifyResult( xrAcquireSwapchainImage( m_internal->m_swapchain, &acquireInfo, &index ) );
+	auto image = m_internal->m_swapchainImages[index];
 
 	XrSwapchainImageWaitInfo swapchainWaitInfo = { .type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
 	swapchainWaitInfo.next = nullptr;
 	swapchainWaitInfo.timeout = XR_INFINITE_DURATION;
-	VerifyResult( xrWaitSwapchainImage( m_swapchain, &swapchainWaitInfo ) );
+	VerifyResult( xrWaitSwapchainImage( m_internal->m_swapchain, &swapchainWaitInfo ) );
 
-	//bindToken = GL_Engine::CG_Data::FBO::staticBind( m_framebuffer->getID() );
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_framebuffer->getID() );
+	//bindToken = GL_Engine::CG_Data::FBO::staticBind( m_internal->m_framebuffer->getID() );
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_internal->m_framebuffer->getID() );
 	glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>( image.image ), 0 );
 	glDrawBuffer( GL_COLOR_ATTACHMENT0 );
 	auto error = glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER );
@@ -392,24 +440,24 @@ void OpenXrComponent::unbind() {
 	XrSwapchainImageReleaseInfo releaseInfo{ .type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 	releaseInfo.next = nullptr;
 
-	xrReleaseSwapchainImage( m_swapchain, &releaseInfo );
+	xrReleaseSwapchainImage( m_internal->m_swapchain, &releaseInfo );
 
 	XrFrameEndInfo frameEndInfo{ .type = XR_TYPE_FRAME_END_INFO };
 	frameEndInfo.next = nullptr;
-	frameEndInfo.displayTime = m_frameState.predictedDisplayTime;
+	frameEndInfo.displayTime = m_internal->m_frameState.predictedDisplayTime;
 	frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	frameEndInfo.layerCount = 1;// static_cast<uint32_t>( layersPointers.size() );
-	auto projectionLayersData = m_projectionLayers.data();
+	auto projectionLayersData = m_internal->m_projectionLayers.data();
 	frameEndInfo.layers = static_cast<XrCompositionLayerBaseHeader**>( (void*) &projectionLayersData );
 
-	VerifyResult( xrEndFrame( m_session, &frameEndInfo ) );
+	VerifyResult( xrEndFrame( m_internal->m_session, &frameEndInfo ) );
 
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
 	//std::move( bindToken ).unbind();
 }
 
 void OpenXrComponent::blitToSwapchain() {
-	if ( m_initialised && bind() ) {
+	if ( m_internal->m_initialised && bind() ) {
 		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, 0, 0, fboWidth, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
 		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth - 400, 0, fboWidth - 400, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
 		unbind();
@@ -419,11 +467,11 @@ void OpenXrComponent::blitToSwapchain() {
 void OpenXrComponent::render( std::array<GL_Engine::CG_Data::FBO *, 2> fbos, GL_Engine::Renderer *renderer ) {
 	{
 
-		auto pose = m_projectionLayerViews[0].pose;
+		auto pose = m_internal->m_projectionLayerViews[0].pose;
 		auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
 		camera->setCameraOrientation( glmQuat );
 		XrMatrix4x4f proj;
-		XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_projectionLayerViews[0].fov, 0.05f, 100.0f );
+		XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[0].fov, 0.05f, 100.0f );
 		glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
 		camera->setProjectionMatrix( *newProj );
 		const auto currentCameraPos = camera->getCameraPosition();
@@ -435,10 +483,10 @@ void OpenXrComponent::render( std::array<GL_Engine::CG_Data::FBO *, 2> fbos, GL_
 		renderer->Render();
 		//camera->translateCamera( glm::vec3( 0.13f, 0.0f, 0.0f ) );
 		
-		pose = m_projectionLayerViews[1].pose;
+		pose = m_internal->m_projectionLayerViews[1].pose;
 		glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
 		camera->setCameraOrientation( glmQuat );
-		XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_projectionLayerViews[1].fov, 0.05f, 100.0f );
+		XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[1].fov, 0.05f, 100.0f );
 		newProj = reinterpret_cast<glm::mat4 *>( &proj );
 		camera->setProjectionMatrix( *newProj );
 		newCameraPos = currentCameraPos + glm::vec3( pose.position.x, pose.position.y, pose.position.z );
@@ -451,7 +499,7 @@ void OpenXrComponent::render( std::array<GL_Engine::CG_Data::FBO *, 2> fbos, GL_
 		camera->update();
 
 	}
-	if ( m_initialised && bind() ) {
+	if ( m_internal->m_initialised && bind() ) {
 		glViewport( 0, 0, fboWidth * 2, fboHeight );
 		glBindFramebuffer( GL_READ_FRAMEBUFFER, fbos[0]->getID() );
 		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, 0, 0, fboWidth, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
@@ -459,9 +507,4 @@ void OpenXrComponent::render( std::array<GL_Engine::CG_Data::FBO *, 2> fbos, GL_
 		glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth, 0, fboWidth *2, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
 		unbind();
 	}
-}
-
-XrBool32 OpenXrComponent::DebugLayerCallback( XrDebugUtilsMessageSeverityFlagsEXT messageSeverity, XrDebugUtilsMessageTypeFlagsEXT messageTypes, const XrDebugUtilsMessengerCallbackDataEXT *callbackData, void *userData ) {
-	std::cout << callbackData->message << std::endl;
-	return XR_FALSE;
 }
