@@ -149,6 +149,12 @@ namespace GL_Engine {
         return this->cameraPosition;
     }
 
+    const glm::vec3 &
+        Camera::translateCamera2( const glm::vec3 &_translation ) {
+        this->cameraPosition += _translation;
+        return this->cameraPosition;
+    }
+
     void Camera::pitchBy( float _pitch ) {
         this->rotationEuler.x += _pitch;
         float radians = glm::radians( _pitch );

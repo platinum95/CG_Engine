@@ -3,6 +3,7 @@
 
 #include "CG_Data.h"
 #include "glad.h"
+#include "IRenderable.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -43,6 +44,9 @@ namespace GL_Engine {
 
         // Move the camera by the given vector
         const glm::vec3 & translateCamera( const glm::vec3 &_Translation );
+
+        // Move the camera by the given vector in world space
+        const glm::vec3 &translateCamera2( const glm::vec3 &_Translation );
 
         // Update the internal structures, return the given camera data
         const std::shared_ptr<CG_Data::UBO> update( bool force=false );
@@ -115,6 +119,18 @@ namespace GL_Engine {
         bool updateProjMatrix{ true };
 
         float farPlane, nearPlane, fov, aspectRatio;
+    };
+
+    class CameraRenderNode : IRenderable {
+    public:
+        void execute() override {
+            camera->update();
+            target->execute();
+        }
+
+    public:
+        std::shared_ptr<IRenderable> target;
+        std::shared_ptr<Camera> camera;
     };
 }
 

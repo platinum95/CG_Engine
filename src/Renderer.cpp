@@ -57,7 +57,7 @@ const std::vector< std::shared_ptr< RenderPass > > & GL_Engine::Renderer::getRen
 	return this->renderPasses;
 }
 
-void GL_Engine::Renderer::Render() const {
+void GL_Engine::Renderer::Render() {
 	for (auto ubo : this->UBO_List) {
 		ubo->UpdateUBO();
 	}

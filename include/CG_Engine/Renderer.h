@@ -2,9 +2,13 @@
 #define RENDERER_H
 
 #include "Entity.h"
+#include "IRenderable.h"
+
+#include <functional>
+
 namespace GL_Engine {
 
-class Renderer {
+class Renderer : public IRenderable {
 public:
     Renderer();
     ~Renderer();
@@ -12,18 +16,20 @@ public:
 
     std::shared_ptr< RenderPass > AddRenderPass();
     std::shared_ptr< RenderPass > AddRenderPass( Shader *_Shader );
-    std::shared_ptr< RenderPass > AddRenderPass( Shader *_Shader, std::function<void(RenderPass&, void*)> _RenderFunction, void *_Data );
+    std::shared_ptr< RenderPass > AddRenderPass( Shader *_Shader, std::function<void( RenderPass &, void * )> _RenderFunction, void *_Data );
     void AddRenderPass( std::shared_ptr<RenderPass> _RPass );
     void AddUBO( CG_Data::UBO *_ubo );
 
     const std::vector<std::shared_ptr<RenderPass>> &getRenderPasses() const;
 
-    void Render() const;
+    void Render();
+
+    void execute() override { Render(); }
 
 private:
     std::vector<std::shared_ptr<RenderPass>> renderPasses;
     static void DefaultRenderer( RenderPass &, void * );
-    std::vector<CG_Data::UBO*> UBO_List;
+    std::vector<CG_Data::UBO *> UBO_List;
 };
 
 } // namespace GL_Engine

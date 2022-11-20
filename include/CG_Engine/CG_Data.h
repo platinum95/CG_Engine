@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "File_IO.h"
 #include "glad.h"
+#include "IRenderable.h"
 #include "ScopedToken.h"
 
 #include <assimp/Importer.hpp>
@@ -237,6 +238,23 @@ private:
     uint8_t textureAttachmentCount{ 0 };
     std::vector<std::shared_ptr<AttachmentBufferObject>> attachments;
 };
+
+template <GLenum fb>
+class FboRenderNodeBase : public IRenderable {
+public:
+    void execute() {
+        UsingScopedToken( fbo->bind() ) {
+            target->execute();
+        }
+    }
+
+    std::shared_ptr<IRenderable> target;
+    std::shared_ptr<FBO> fbo;
+};
+
+using FboTargetRenderNode = FboRenderNodeBase<GL_FRAMEBUFFER>;
+using FboDrawTargetRenderNode = FboRenderNodeBase<GL_DRAW_FRAMEBUFFER>;
+using FboReadTargetRenderNode = FboRenderNodeBase<GL_READ_FRAMEBUFFER>;
 
 } // namespace CG_Data
 } // namespace GL_Engine

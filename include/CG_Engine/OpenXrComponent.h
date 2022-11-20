@@ -2,19 +2,25 @@
 #define OPENXR_COMPONENT_H
 
 #include "InternalObj.h"
+#include "IRenderable.h"
+
+#include <memory>
 
 struct GLFWwindow;
 
 namespace GL_Engine {
+class IRendererable;
 class Renderer;
 class Camera;
 
 namespace CG_Data { class FBO; }
 }
 
+namespace GL_Engine {
+
 class OpenXrComponent {
 public:
-    OpenXrComponent() = default;
+    OpenXrComponent();
     void init( GLFWwindow *window );
     void cleanup();
 
@@ -25,16 +31,18 @@ public:
 
     void blitToSwapchain();
 
-    void render( std::array<GL_Engine::CG_Data::FBO *, 2> fbos, GL_Engine::Renderer *renderer );
+    void render( std::shared_ptr<IRenderable> renderable );
 
-    uint32_t fboWidth, fboHeight;
-    GL_Engine::Camera *camera;
+    void tempSetCamera( std::shared_ptr<Camera> camera );
+
 private:
     bool canRender();
 
 private:
     class XrInternal;
-    InternalObj<XrInternal, 1024> m_internal;
+    InternalObj<XrInternal, 1024*8> m_internal;
+    uint32_t fboWidth, fboHeight;
 };
 
+} // namespace GL_Engine
 #endif // OPENXR_COMPONENT_H

@@ -6,12 +6,9 @@
 template<typename T, size_t size>
 class InternalObj {
 public:
-	InternalObj() = default;
-
 	template<typename ... Args>
 	InternalObj( Args... args ) {
-		T *member = GetMember();
-		*member = T( args... );
+		new ( m_storage.data() ) T( std::forward<Args>( args )... );
 	}
 
 	inline T *operator->() {
