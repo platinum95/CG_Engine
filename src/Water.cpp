@@ -181,7 +181,7 @@ void Water::defaultWaterRenderer( RenderPass & _rPass, void * _data ){
             waterObjects[ i ]->Activate();
     }
 
-    std::move( bindToken ).unbind();
+    std::move( bindToken ).release();
     camUbo->clippingPlane[ 1 ] = 1000;
     glDisable( GL_CLIP_DISTANCE0 );
     that->Activate();

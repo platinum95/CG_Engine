@@ -213,7 +213,7 @@ namespace GL_Engine {
             this->staticRenderer->Render();
         }
 
-        std::move( bindToken ).unbind();
+        std::move( bindToken ).release();
         fbo.cleanup();
     }
 
@@ -237,6 +237,6 @@ namespace GL_Engine {
             glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
             this->dynamicRenderer->Render();
         }
-        std::move( bindToken ).unbind();
+        std::move( bindToken ).release();
     }
 }

@@ -4,10 +4,13 @@
 #include "Common.h"
 #include "File_IO.h"
 #include "glad.h"
+#include "ScopedToken.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+
+#include <glm/vec2.hpp>
 
 #include <functional>
 #include <iostream>
@@ -163,35 +166,18 @@ private:
 class FBO {
 public:
     // TODO - move to a component
-    static std::list<GLuint> FramebufferStack;
 
-    class [[nodiscard]] FramebufferBindToken {
-    public:
-        FramebufferBindToken() = default;
-        FramebufferBindToken( FramebufferBindToken &&token ) = default;
-        FramebufferBindToken &operator=( FramebufferBindToken &&rhs ) {
-            std::move( this )->~FramebufferBindToken();
-            this->m_id = std::exchange( rhs.m_id, InvalidGlId );
-            return *this;
-        };
-        ~FramebufferBindToken() {
-            if ( isValid() ) {
-                FBO::staticUnbind( m_id );
-                m_id = InvalidGlId;
-            }
-        }
-        bool isValid() { return m_id != InvalidGlId; }
-        void unbind() &&{ std::move( this )->~FramebufferBindToken(); }
-
-        FramebufferBindToken( const FramebufferBindToken & ) = delete;
-        FramebufferBindToken &operator=( const FramebufferBindToken & ) = delete;
-
-    private:
-        friend class FBO;
-        FramebufferBindToken( GLuint id ) : m_id( id ) {};
-
-        GLuint m_id{ InvalidGlId };
+    struct FramebufferBindData {
+        GLuint id{ InvalidGlId };
+        glm::vec<2, uint16_t> viewportSize{ 0, 0 };
+        bool operator==( const FramebufferBindData& ) const = default;
     };
+
+    static std::list<FramebufferBindData> FramebufferStack;
+
+    static void staticUnbind( FramebufferBindData &id );
+
+    using FramebufferBindToken = ScopedToken<FramebufferBindData, FBO::staticUnbind>;
 
     class AttachmentBufferObject {
     public:
@@ -237,10 +223,10 @@ public:
     const GLuint getID() const;
     void unbind() const;
 
-    static FramebufferBindToken staticBind( GLuint id );
+    static FramebufferBindToken staticBind( FramebufferBindData &&id );
 
+    //static void staticUnbind( FramebufferBindData &id );
 private:
-    static void staticUnbind( GLuint id );
     uint16_t width, height;
 
 protected:

@@ -311,7 +311,7 @@ namespace GL_Engine{
 			std::shared_ptr< FBO::AttachmentBufferObject >
 			FBO::addAttachment( AttachmentType _Attachment, uint16_t _Width,
 								uint16_t _Height ) {
-				auto bindToken = staticBind( this->ID );
+				auto bindToken = staticBind( { this->ID, glm::vec2( this->width, this->height ) } );
 				glDrawBuffer( GL_COLOR_ATTACHMENT0 );
 				switch (_Attachment) {
 				case ColourTexture: {
@@ -386,7 +386,7 @@ namespace GL_Engine{
 					this->complete = true;
 				}
 
-				std::move( bindToken ).unbind();
+				std::move( bindToken ).release();
 
 				std::shared_ptr< AttachmentBufferObject > abo =
 					attachments.back();
@@ -405,7 +405,7 @@ namespace GL_Engine{
 				if (!this->complete)
 					throw std::runtime_error("Attempting to bind incomplete framebuffer!\n");
 				glBindTexture(GL_TEXTURE_2D, 0);
-				auto bindToken = staticBind( this->ID );
+				auto bindToken = staticBind( { this->ID, glm::vec2( this->width, this->height ) } );
 				glClearColor(0.0, 0.0, 0.0, 1.0);
 				for (int i = 0; i < _Count; i++) {
 					glDrawBuffer( _ColourAttachments[i] );
@@ -420,20 +420,20 @@ namespace GL_Engine{
 				return this->ID;
 			}
 
-			void FBO::unbind() const {
-				staticUnbind( this->ID );
+			//void FBO::unbind() const {
+			//	staticUnbind( this->ID );
+			//}
+
+			std::list<FBO::FramebufferBindData> FBO::FramebufferStack;
+
+			FBO::FramebufferBindToken FBO::staticBind( FramebufferBindData &&data ) {
+				glBindFramebuffer( GL_FRAMEBUFFER, data.id );
+				FramebufferStack.push_back( data );
+				return FramebufferBindToken( std::move( data ) );
 			}
 
-			std::list<GLuint> FBO::FramebufferStack;
-
-			FBO::FramebufferBindToken FBO::staticBind( GLuint id ) {
-				glBindFramebuffer( GL_FRAMEBUFFER, id );
-				FramebufferStack.push_back( id );
-				return FramebufferBindToken( id );
-			}
-
-			void FBO::staticUnbind( GLuint id ) {
-				const auto entry = std::find( FramebufferStack.crbegin(), FramebufferStack.crend(), id );
+			void FBO::staticUnbind( FBO::FramebufferBindData &data ) {
+				const auto entry = std::find( FramebufferStack.crbegin(), FramebufferStack.crend(), data );
 				if ( entry == FramebufferStack.crend() ) {
 					throw std::runtime_error( "Attempting to unbind untracked framebuffer!\n" );
 				}
@@ -441,9 +441,9 @@ namespace GL_Engine{
 				if ( entry == FramebufferStack.crbegin() ) {
 					FramebufferStack.pop_back();
 					const auto newFboIdIt = FramebufferStack.crbegin();
-					const auto newFboId = newFboIdIt == FramebufferStack.crend() ? 0 : *newFboIdIt;
-					glBindFramebuffer( GL_FRAMEBUFFER, newFboId );
-					glViewport( 0, 0, CG_Engine::ViewportWidth, CG_Engine::ViewportHeight );
+					const auto newFboId = newFboIdIt == FramebufferStack.crend() ? FramebufferBindData{ 0, glm::vec2( 0, 0 ) } : *newFboIdIt;
+					glBindFramebuffer( GL_FRAMEBUFFER, newFboId.id );
+					glViewport( 0, 0, newFboId.viewportSize.x, newFboId.viewportSize.y );
 				}
 				else {
 					FramebufferStack.erase( std::next( entry ).base() );
