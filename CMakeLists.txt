@@ -23,7 +23,7 @@ target_sources( CG_Engine
 
 if( MSVC )
   target_compile_options( CG_Engine PRIVATE /W3 /WX )
-  add_definitions( /D_CRT_SECURE_NO_WARNINGS /DGLM_FORCE_CXX11 )
+  add_definitions( /D_CRT_SECURE_NO_WARNINGS /DGLM_FORCE_CXX17 )
 else()
   target_compile_options( CG_Engine PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

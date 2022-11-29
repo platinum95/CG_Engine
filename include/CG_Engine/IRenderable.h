@@ -1,6 +1,7 @@
 #ifndef I_RENDERER_H
 #define I_RENDERER_H
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -13,8 +14,8 @@ public:
 
 class StaticRenderNode : public IRenderable {
 public:
-    void addNode( std::shared_ptr<IRenderable> &&renderable ) {
-        m_children.push_back( renderable );
+    void addNode( std::shared_ptr<IRenderable> renderable ) {
+        m_children.push_back( std::move( renderable ) );
     }
 
     void execute() override {
@@ -25,6 +26,19 @@ public:
 
 private:
     std::vector<std::shared_ptr<IRenderable>> m_children;
+};
+
+class DebugRenderNode : public IRenderable {
+public:
+    DebugRenderNode( std::function<void()> targetFn )
+        : m_targetFn( std::move( targetFn ) ) {}
+
+    void execute() {
+        m_targetFn();
+    }
+
+private:
+    std::function<void()> m_targetFn;
 };
 
 } // namespace GL_Engine

@@ -2,6 +2,7 @@
 #define OPENXR_COMPONENT_H
 
 #include "InternalObj.h"
+#include "IComponent.h"
 #include "IRenderable.h"
 
 #include <memory>
@@ -18,13 +19,13 @@ namespace CG_Data { class FBO; }
 
 namespace GL_Engine {
 
-class OpenXrComponent {
+class OpenXrComponent : public IComponent {
 public:
     OpenXrComponent();
-    void init( GLFWwindow *window );
     void cleanup();
 
-    void update();
+    void update() override;
+    static OpenXrComponent* get() { return &s_component; }
 
     bool bind();
     void unbind();
@@ -36,12 +37,15 @@ public:
     void tempSetCamera( std::shared_ptr<Camera> camera );
 
 private:
+    void initialise() override;
+
     bool canRender();
 
 private:
     class XrInternal;
-    InternalObj<XrInternal, 1024*8> m_internal;
+    InternalObj<XrInternal, 512> m_internal;
     uint32_t fboWidth, fboHeight;
+    static OpenXrComponent s_component;
 };
 
 } // namespace GL_Engine

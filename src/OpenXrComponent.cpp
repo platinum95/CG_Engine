@@ -1,6 +1,8 @@
 #include "OpenXrComponent.h"
 
 #include "Camera.h"
+#include "CG_Instance.h"
+#include "GlfwComponent.h"
 #include "Log.h"
 #include "Renderer.h"
 #include "xr_linear.h"
@@ -32,13 +34,14 @@
 
 namespace {
 
-XrResult VerifyResult( const XrResult &&result, const std::initializer_list<XrResult> validResults = {} ) {
+XrResult VerifyResult2( const XrResult &&result, std::string_view callName, const std::initializer_list<XrResult> validResults = {} ) {
     if ( result != XR_SUCCESS && std::ranges::find( validResults, result ) == validResults.end() ) {
-        // TODO
-        std::exit( -1 );
+        cg_assertMsg( false, "OpenXrComponent::VerifyResult -- XR call {} had unexpected result {}", callName, static_cast<int>( result ) );
     }
     return result;
 }
+
+#define VerifyResult( call, ... ) VerifyResult2( call, #call, __VA_ARGS__ )
 
 template<typename T>
 std::vector<T> XrEnumerateItemsFunc( XrResult( *func )( uint32_t, uint32_t *, T * ), T &&defaultValue = T() ) {
@@ -91,7 +94,7 @@ public:
     std::array<XrCompositionLayerProjection, 1> m_projectionLayers;
     XrSpace m_space;
 
-    GL_Engine::CG_Data::FBO::FramebufferBindToken bindToken;
+    GL_Engine::CG_Data::FBO::FramebufferBindToken<GL_DRAW_FRAMEBUFFER> bindToken;
 
     std::array<std::shared_ptr<CG_Data::FBO>, 2> fbos;
 
@@ -99,6 +102,8 @@ public:
 
     static XrBool32 DebugLayerCallback( XrDebugUtilsMessageSeverityFlagsEXT messageSeverity, XrDebugUtilsMessageTypeFlagsEXT messageTypes, const XrDebugUtilsMessengerCallbackDataEXT *callbackData, void *userData );
 };
+
+OpenXrComponent OpenXrComponent::s_component;
 
 OpenXrComponent::OpenXrComponent() : m_internal() {
 
@@ -108,7 +113,7 @@ void OpenXrComponent::tempSetCamera( std::shared_ptr<Camera> camera ) {
     m_internal->m_camera = std::move( camera );
 }
 
-void OpenXrComponent::init( GLFWwindow *window ) {
+void OpenXrComponent::initialise() {
 
     auto properties = XrEnumerateItemsFunc( xrEnumerateApiLayerProperties );
 
@@ -123,10 +128,8 @@ void OpenXrComponent::init( GLFWwindow *window ) {
                 return a.extensionName == extensionName;
             } );
 
-        if ( !extensionAvailable ) {
-            // TODO
-            std::exit( -1 );
-        }
+        cg_assertMsg( extensionAvailable, "Failed to find required extension {}", extensionName );
+
         sessionExtensions.push_back( extensionName.data() );
     };
 
@@ -150,7 +153,6 @@ void OpenXrComponent::init( GLFWwindow *window ) {
     createInfo.enabledExtensionNames = sessionExtensions.data();
 
     XrDebugUtilsMessengerCreateInfoEXT dumci;
-
 
     typedef XrBool32( XRAPI_PTR *PFN_xrDebugUtilsMessengerCallbackEXT )(
         XrDebugUtilsMessageSeverityFlagsEXT              messageSeverity,
@@ -222,9 +224,14 @@ void OpenXrComponent::init( GLFWwindow *window ) {
     XrGraphicsRequirementsOpenGLKHR graphicsRequirements{ .type = XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR };
     VerifyResult( pxrGetOpenGLGraphicsRequirementsKHR( m_internal->m_instance, systemId, &graphicsRequirements ) );
 
+    GlfwComponent *test1 = nullptr;
+    IComponent *test2 = test1;
+    auto glWindow = getInstance()->getComponent<GlfwComponent>()->getWindow();
+    cg_assert( glWindow );
+
     XrGraphicsBindingOpenGLWin32KHR gBinding;
-    gBinding.hDC = GetDC( glfwGetWin32Window( window ) );
-    gBinding.hGLRC = glfwGetWGLContext( window );
+    gBinding.hDC = GetDC( glfwGetWin32Window( glWindow ) );
+    gBinding.hGLRC = glfwGetWGLContext( glWindow );
     gBinding.next = nullptr;
     gBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR;
 
@@ -450,14 +457,11 @@ bool OpenXrComponent::bind() {
     swapchainWaitInfo.timeout = XR_INFINITE_DURATION;
     VerifyResult( xrWaitSwapchainImage( m_internal->m_swapchain, &swapchainWaitInfo ) );
 
-    //bindToken = GL_Engine::CG_Data::FBO::staticBind( m_internal->m_framebuffer->getID() );
-    glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_internal->m_framebuffer->getID() );
+    m_internal->bindToken = CG_Data::FBO::staticBind<GL_DRAW_FRAMEBUFFER>( { m_internal->m_framebuffer->getID(), glm::vec2( fboWidth, fboHeight ) } );
+
     glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>( image.image ), 0 );
     glDrawBuffer( GL_COLOR_ATTACHMENT0 );
-    auto error = glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER );
-    if ( error != GL_FRAMEBUFFER_COMPLETE ) {
-        std::exit( -1 );
-    }
+    cg_verify( glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
 
     return true;
 }
@@ -478,8 +482,7 @@ void OpenXrComponent::unbind() {
 
     VerifyResult( xrEndFrame( m_internal->m_session, &frameEndInfo ) );
 
-    glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
-    //std::move( bindToken ).unbind();
+    std::move( m_internal->bindToken ).release();
 }
 
 void OpenXrComponent::blitToSwapchain() {
@@ -491,40 +494,39 @@ void OpenXrComponent::blitToSwapchain() {
 }
 
 void OpenXrComponent::render( std::shared_ptr<IRenderable> renderable ) {
-        auto generateCameraRenderNode = [this, renderable] ( uint8_t eyeId ) {
-            CameraRenderNode renderNode;
-            auto pose = m_internal->m_projectionLayerViews[eyeId].pose;
-            auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
-            XrMatrix4x4f proj;
-            XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[eyeId].fov, 0.05f, 100.0f );
-            glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
-
-            renderNode.camera = m_internal->m_camera;
-            renderNode.camera->translateCamera2( glm::vec3( pose.position.x, pose.position.y, pose.position.z ) );
-            renderNode.camera->setCameraOrientation( glmQuat );
-            renderNode.camera->setProjectionMatrix( *newProj );
-            renderNode.camera->update();
-
-            auto fboNode = std::make_shared<CG_Data::FboDrawTargetRenderNode>();
-            fboNode->target = renderable;
-            fboNode->fbo = m_internal->fbos[eyeId];
-
-            renderNode.target = std::move( fboNode );
-            return renderNode;
-        };
-
-        const auto prePos = m_internal->m_camera->getCameraPosition();
-        generateCameraRenderNode( 0 ).execute();
-        m_internal->m_camera->setCameraPosition( prePos );
-        generateCameraRenderNode( 1 ).execute();
-        m_internal->m_camera->setCameraPosition( prePos );
-
     if ( m_internal->m_initialised && bind() ) {
+            auto generateCameraRenderNode = [this, renderable] ( uint8_t eyeId ) {
+                auto renderNode = std::make_shared<CameraRenderNode>();
+                auto pose = m_internal->m_projectionLayerViews[eyeId].pose;
+                auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
+                XrMatrix4x4f proj;
+                XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[eyeId].fov, 0.05f, 100.0f );
+                glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
+
+                renderNode->camera = m_internal->m_camera;
+                renderNode->camera->translateCamera2( glm::vec3( pose.position.x, pose.position.y, pose.position.z ) );
+                renderNode->camera->setCameraOrientation( glmQuat );
+                renderNode->camera->setProjectionMatrix( *newProj );
+                renderNode->camera->update();
+
+                auto fboNode = std::make_shared<CG_Data::FboRenderNodeBase>( m_internal->fbos[eyeId] );
+                fboNode->writeTarget = std::move( renderNode );
+                fboNode->readTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId] { glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth * eyeId, 0, fboWidth * eyeId, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR ); } ) );
+
+                return fboNode;
+            };
+
+            const auto prePos = m_internal->m_camera->getCameraPosition();
+            auto eye1 = generateCameraRenderNode( 0 );
+            auto eye2 = generateCameraRenderNode( 1 );
+            CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye1 )->execute();
+            m_internal->m_camera->setCameraPosition( prePos );
+            CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye2 )->execute();
+            m_internal->m_camera->setCameraPosition( prePos );
+
         glViewport( 0, 0, fboWidth * 2, fboHeight );
-        glBindFramebuffer( GL_READ_FRAMEBUFFER, m_internal->fbos[0]->getID() );
-        glBlitFramebuffer( 0, 0, fboWidth, fboHeight, 0, 0, fboWidth, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
-        glBindFramebuffer( GL_READ_FRAMEBUFFER, m_internal->fbos[1]->getID() );
-        glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth, 0, fboWidth * 2, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+        CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye1 )->execute();
+        CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye2 )->execute();
         unbind();
     }
 }

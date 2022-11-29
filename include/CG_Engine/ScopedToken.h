@@ -6,6 +6,7 @@
 #define UsingScopedToken( getterFn ) if ( auto _scopedToken = getterFn; true )
 
 template<std::equality_comparable C, auto UnbindFn>
+    requires std::is_invocable_v<decltype(UnbindFn), C&>
 class [[nodiscard]] ScopedToken {
 public:
     ScopedToken() = default;
@@ -22,6 +23,7 @@ public:
             m_id = C();
         }
     }
+
     bool isValid() { return m_id != C(); };
 
     void release() && {};

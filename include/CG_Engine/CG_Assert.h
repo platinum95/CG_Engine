@@ -6,11 +6,13 @@
 
 #define cg_break() __debugbreak();
 
-#define cg_assert( condition ) \
+#define cg_assertMsg( condition, msg, ... ) \
     if ( !(condition) ) [[unlikely]] { \
-        Log::Error( "Assertion failed: " #condition ); \
+        GL_Engine::Log::Error( "Assertion failed: " msg, __VA_ARGS__ ); \
         cg_break() \
     }
+
+#define cg_assert( condition ) cg_assertMsg( condition, "Assertion failed: " #condition )
 
 #define cg_verify( condition ) cg_assert( condition )
 

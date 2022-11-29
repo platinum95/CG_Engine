@@ -121,7 +121,7 @@ namespace GL_Engine {
         float farPlane, nearPlane, fov, aspectRatio;
     };
 
-    class CameraRenderNode : IRenderable {
+    class CameraRenderNode : public IRenderable {
     public:
         void execute() override {
             camera->update();

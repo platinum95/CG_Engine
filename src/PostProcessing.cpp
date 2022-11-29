@@ -1,5 +1,4 @@
 #include "PostProcessing.h"
-#include "CG_Engine.h"
 
 namespace GL_Engine {
 

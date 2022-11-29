@@ -1,6 +1,5 @@
 #include "CG_Data.h"
 #include "CG_Assert.h"
-#include "CG_Engine.h"
 
 #include <glm/vec3.hpp>
 
@@ -314,7 +313,7 @@ void FBO::cleanup() {
 std::shared_ptr< FBO::AttachmentBufferObject >
 FBO::addAttachment( AttachmentType _Attachment, uint16_t _Width,
     uint16_t _Height ) {
-    auto bindToken = staticBind( { this->ID, glm::vec2( this->width, this->height ) } );
+    auto bindToken = staticBind<GL_FRAMEBUFFER>( { this->ID, glm::vec2( this->width, this->height ) } );
     glDrawBuffer( GL_COLOR_ATTACHMENT0 );
     switch ( _Attachment ) {
     case ColourTexture:
@@ -401,28 +400,7 @@ FBO::addAttachment( AttachmentType _Attachment, uint16_t _Width,
     return abo;
 
 }
-FBO::FramebufferBindToken FBO::bind( uint8_t _ColourAttachment ) const {
-    cg_assert( this->complete ); //"Attempting to bind incomplete framebuffer!\n"
 
-    GLenum attachment = GL_COLOR_ATTACHMENT0 + _ColourAttachment;
-    return bind( 1, &attachment );
-}
-
-FBO::FramebufferBindToken FBO::bind( uint16_t _Count, const GLenum *_ColourAttachments ) const {
-    cg_assert( this->complete );
-
-    glBindTexture( GL_TEXTURE_2D, 0 );
-    auto bindToken = staticBind( { this->ID, glm::vec2( this->width, this->height ) } );
-    glClearColor( 0.0, 0.0, 0.0, 1.0 );
-    for ( int i = 0; i < _Count; i++ ) {
-        glDrawBuffer( _ColourAttachments[i] );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
-    }
-    glDrawBuffers( _Count, _ColourAttachments );
-    glViewport( 0, 0, this->width, this->height );
-
-    return bindToken;
-}
 const GLuint FBO::getID() const {
     return this->ID;
 }
@@ -432,28 +410,25 @@ const GLuint FBO::getID() const {
 //}
 
 std::list<FBO::FramebufferBindData> FBO::FramebufferStack;
+std::list<FBO::FramebufferBindData> FBO::ReadFramebufferStack;
+std::list<FBO::FramebufferBindData> FBO::DrawFramebufferStack;
 
-FBO::FramebufferBindToken FBO::staticBind( FramebufferBindData &&data ) {
-    glBindFramebuffer( GL_FRAMEBUFFER, data.id );
-    FramebufferStack.push_back( data );
-    return FramebufferBindToken( std::move( data ) );
-}
 
-void FBO::staticUnbind( FBO::FramebufferBindData &data ) {
-    const auto entry = std::find( FramebufferStack.crbegin(), FramebufferStack.crend(), data );
-    if ( entry == FramebufferStack.crend() ) {
+void FBO::staticUnbind( FBO::FramebufferBindData &data, std::list<FramebufferBindData> &stack ) {
+    const auto entry = std::find( stack.crbegin(), stack.crend(), data );
+    if ( entry == stack.crend() ) {
         throw std::runtime_error( "Attempting to unbind untracked framebuffer!\n" );
     }
 
-    if ( entry == FramebufferStack.crbegin() ) {
-        FramebufferStack.pop_back();
-        const auto newFboIdIt = FramebufferStack.crbegin();
-        const auto newFboId = newFboIdIt == FramebufferStack.crend() ? FramebufferBindData{ 0, glm::vec2( CG_Engine::ViewportWidth, CG_Engine::ViewportHeight ) } : *newFboIdIt;
+    if ( entry == stack.crbegin() ) {
+        stack.pop_back();
+        const auto newFboIdIt = stack.crbegin();
+        const auto newFboId = newFboIdIt == stack.crend() ? FramebufferBindData{ 0, glm::vec2( 1920, 1080 ) } : *newFboIdIt;
         glBindFramebuffer( GL_FRAMEBUFFER, newFboId.id );
         glViewport( 0, 0, newFboId.viewportSize.x, newFboId.viewportSize.y );
     }
     else {
-        FramebufferStack.erase( std::next( entry ).base() );
+        stack.erase( std::next( entry ).base() );
     }
 }
 

@@ -7,6 +7,7 @@ template<typename T, size_t size>
 class InternalObj {
 public:
 	template<typename ... Args>
+		requires ( sizeof( T ) <= size )
 	InternalObj( Args... args ) {
 		new ( m_storage.data() ) T( std::forward<Args>( args )... );
 	}

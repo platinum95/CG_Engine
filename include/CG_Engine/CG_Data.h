@@ -1,6 +1,7 @@
 #ifndef CG_DATA_H
 #define CG_DATA_H
 
+#include "CG_Assert.h"
 #include "Common.h"
 #include "File_IO.h"
 #include "glad.h"
@@ -175,10 +176,46 @@ public:
     };
 
     static std::list<FramebufferBindData> FramebufferStack;
+    static std::list<FramebufferBindData> ReadFramebufferStack;
+    static std::list<FramebufferBindData> DrawFramebufferStack;
 
-    static void staticUnbind( FramebufferBindData &id );
+    static void staticUnbind( FramebufferBindData &id, std::list<FramebufferBindData> &stack );
 
-    using FramebufferBindToken = ScopedToken<FramebufferBindData, FBO::staticUnbind>;
+    template<GLenum fb = GL_FRAMEBUFFER>
+    static void staticUnbind( FramebufferBindData &id ) {
+        if constexpr ( fb == GL_FRAMEBUFFER ) {
+            staticUnbind( id, FramebufferStack );
+        }
+        else if constexpr ( fb == GL_DRAW_FRAMEBUFFER ) {
+            staticUnbind( id, DrawFramebufferStack );
+        }
+        else if constexpr ( fb == GL_READ_FRAMEBUFFER ) {
+            staticUnbind( id, ReadFramebufferStack );
+        }
+    }
+
+    template<GLenum fb>
+    using FramebufferBindToken = ScopedToken<FramebufferBindData, FBO::staticUnbind<fb>>;
+
+    template<GLenum fb>
+    static FramebufferBindToken<fb> staticBind( FramebufferBindData &&data, std::list<FramebufferBindData> &stack ){
+        glBindFramebuffer( fb, data.id );
+        stack.push_back( data );
+        return FramebufferBindToken<fb>( std::move( data ) );
+    }
+
+    template<GLenum fb=GL_FRAMEBUFFER>
+    static FramebufferBindToken<fb> staticBind( FramebufferBindData &&id ) {
+        if constexpr ( fb == GL_FRAMEBUFFER ) {
+            return staticBind<GL_FRAMEBUFFER>( std::move( id ), FramebufferStack );
+        }
+        else if constexpr ( fb == GL_DRAW_FRAMEBUFFER ) {
+            return staticBind<GL_DRAW_FRAMEBUFFER>( std::move( id ), DrawFramebufferStack );
+        }
+        else if constexpr ( fb == GL_READ_FRAMEBUFFER ) {
+            return staticBind<GL_READ_FRAMEBUFFER>( std::move( id ), ReadFramebufferStack );
+        }
+    }
 
     class AttachmentBufferObject {
     public:
@@ -218,15 +255,43 @@ public:
 
     std::shared_ptr<AttachmentBufferObject> addAttachment( AttachmentType _attachment, uint16_t _width, uint16_t _height );
 
-    FramebufferBindToken bind( uint8_t _colourAttachment = 0 ) const;
-    FramebufferBindToken bind( uint16_t _count, const GLenum *_colourAttachments ) const;
+    template<GLenum fb = GL_FRAMEBUFFER>
+    FBO::FramebufferBindToken<fb> bind( uint8_t _ColourAttachment = 0 ) const {
+        cg_assert( this->complete ); //"Attempting to bind incomplete framebuffer!\n"
+        if constexpr ( fb == GL_READ_FRAMEBUFFER ) {
+            return bindRead();
+        }
+        else {
+            GLenum attachment = GL_COLOR_ATTACHMENT0 + _ColourAttachment;
+            return bind<fb>( 1, &attachment );
+        }
+    }
+
+    template<GLenum fb = GL_FRAMEBUFFER>
+    FBO::FramebufferBindToken<fb> bind( uint16_t _Count, const GLenum *_ColourAttachments ) const {
+        cg_assert( this->complete );
+
+        glBindTexture( GL_TEXTURE_2D, 0 );
+        auto bindToken = staticBind<fb>( { this->ID, glm::vec2( this->width, this->height ) } );
+        glClearColor( 0.0, 0.0, 0.0, 1.0 );
+        for ( int i = 0; i < _Count; i++ ) {
+            glDrawBuffer( _ColourAttachments[i] );
+            glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
+        }
+        glDrawBuffers( _Count, _ColourAttachments );
+        glViewport( 0, 0, this->width, this->height );
+
+        return bindToken;
+    }
+
+    FBO::FramebufferBindToken<GL_READ_FRAMEBUFFER> bindRead() const {
+        cg_assert( this->complete );
+        return staticBind<GL_READ_FRAMEBUFFER>( { this->ID, glm::vec2( this->width, this->height ) } );
+    }
 
     const GLuint getID() const;
     void unbind() const;
 
-    static FramebufferBindToken staticBind( FramebufferBindData &&id );
-
-    //static void staticUnbind( FramebufferBindData &id );
 private:
     uint16_t width, height;
 
@@ -239,22 +304,63 @@ private:
     std::vector<std::shared_ptr<AttachmentBufferObject>> attachments;
 };
 
-template <GLenum fb>
-class FboRenderNodeBase : public IRenderable {
+class FboRenderNodeBase;
+
+template<auto func>
+class FboRenderable : public IRenderable {
 public:
+    FboRenderable( std::shared_ptr<FboRenderNodeBase> base )
+        : m_base( base ) {}
+
     void execute() {
-        UsingScopedToken( fbo->bind() ) {
-            target->execute();
+        (m_base.get()->*func)();
+    }
+
+private:
+    std::shared_ptr<FboRenderNodeBase> m_base;
+};
+
+class FboRenderNodeBase {
+public:
+    FboRenderNodeBase( std::shared_ptr<FBO> fbo )
+        : m_fbo( fbo ) {}
+
+    static std::shared_ptr<IRenderable> GenerateReadRenderNode( std::shared_ptr<FboRenderNodeBase> base ) {
+        return std::make_shared<FboRenderable<&FboRenderNodeBase::executeRead>>( std::move( base ) );
+    }
+
+    static std::shared_ptr<IRenderable> GenerateDrawRenderNode( std::shared_ptr<FboRenderNodeBase> base ) {
+        return std::make_shared<FboRenderable<&FboRenderNodeBase::executeRenderWrite>>( std::move( base ) );
+    }
+
+    static std::shared_ptr<IRenderable> GenerateBlitRenderNode( std::shared_ptr<FboRenderNodeBase> base ) {
+        return std::make_shared<FboRenderable<&FboRenderNodeBase::executeBlitWrite>>( std::move( base ) );
+    }
+
+private:
+    void executeRenderWrite() {
+        UsingScopedToken( m_fbo->bind<GL_FRAMEBUFFER>() ) {
+            writeTarget->execute();
         }
     }
 
-    std::shared_ptr<IRenderable> target;
-    std::shared_ptr<FBO> fbo;
-};
+    void executeRead() {
+        UsingScopedToken( m_fbo->bind<GL_READ_FRAMEBUFFER>() ) {
+            readTarget->execute();
+        }
+    }
 
-using FboTargetRenderNode = FboRenderNodeBase<GL_FRAMEBUFFER>;
-using FboDrawTargetRenderNode = FboRenderNodeBase<GL_DRAW_FRAMEBUFFER>;
-using FboReadTargetRenderNode = FboRenderNodeBase<GL_READ_FRAMEBUFFER>;
+    void executeBlitWrite() {
+        UsingScopedToken( m_fbo->bind<GL_DRAW_FRAMEBUFFER>() ) {
+            writeTarget->execute();
+        }
+    }
+
+public:
+    std::shared_ptr<IRenderable> writeTarget, readTarget;
+private:
+    std::shared_ptr<FBO> m_fbo;
+};
 
 } // namespace CG_Data
 } // namespace GL_Engine
