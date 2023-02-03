@@ -1,8 +1,10 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+#include "AssimpAdapters.h"
 #include "CG_Data.h"
-#include "Shader.h"
+#include "MaterialData.h"
+//#include "Shader.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -15,6 +17,7 @@
 #include <vector>
 
 namespace GL_Engine {
+class Shader;
 class Entity {
 public:
     Entity();
@@ -175,13 +178,16 @@ private:
 /*
 *Handles the data loaded in from a model file.
 */
-class ModelAttribute : public CG_Data::VAO {
+class ModelAttribute : public CG_Data::VAO, public IRenderable {
 public:
     ~ModelAttribute();
     ModelAttribute( const aiScene *_Scene, unsigned int index, const std::string &_PathBase );
 
     CG_Data::VBO *GetVBO( int index );
-    int MeshIndex, NormalIndex, TexCoordIndex, IndicesIndex;
+    int MeshIndex;
+    int NormalIndex;
+    int TexCoordIndex;
+    int IndicesIndex;
     const uint64_t GetVertexCount() const;
     void AddTexture( std::shared_ptr<CG_Data::Texture> _Texture );
     std::vector<std::shared_ptr<CG_Data::Texture>> ModelTextures;
@@ -189,10 +195,24 @@ public:
     std::vector<std::shared_ptr<MeshBone>> meshBones;
     std::map<std::string, unsigned int> BoneIndex;
     const std::string getName() const;
+
+    const glm::mat4& GetMeshSceneTransformation() const { return meshSceneTransformation; }
+
+    void execute() override {
+        // TODO - bind token for VAO
+        this->BindVAO();
+        glDrawElements( GL_TRIANGLES, static_cast<GLsizei>( VertexCount ), GL_UNSIGNED_INT, 0 );
+    }
+    const CG_Data::UBO* GetMaterialBuffer() const { return m_materialBuffer.get(); }
+    const Material& GetMaterial() const { return m_material; }
 private:
     uint64_t VertexCount = 0;
     std::string name;
+    Material m_material;
+    std::unique_ptr<CG_Data::UBO> m_materialBuffer;
+    glm::mat4 meshSceneTransformation;
 };
+
 using ModelAttribList = std::vector<std::shared_ptr<ModelAttribute>>;
 
 //Shader can take max 5 bones. Weight is 0 if bone not used
@@ -212,6 +232,37 @@ protected:
 private:
     static void RiggedModelRenderer( RenderPass &_Pass, void *_Data );
     ModelAttribList ModelAttributes;
+};
+
+class SimpleModelEntity : public Entity, public IRenderable {
+public:
+    SimpleModelEntity( std::shared_ptr<ModelAttribute> &modelAttribute, const glm::mat4& baseTransform ) : m_modelAttribute( modelAttribute ) {
+        auto baseModelTransform = m_modelAttribute->GetMeshSceneTransformation();
+        this->SetPosition( baseModelTransform[ 3 ] );
+        this->SetOrientation( glm::toQuat( baseModelTransform ) );
+        this->PitchBy( 180 );
+//        this->SetScale( { baseModelTransform[0][0], baseModelTransform[1][1], baseModelTransform[2][2] } );
+        this->SetScale( {1.0, 1.0, 1.0 } );
+        this->UpdateMatrix();
+        m_modelLocalTransform = glm::inverse( baseTransform ) * modelAttribute->GetMeshSceneTransformation();
+       // cg_assert( baseModelTransform == this->TransformMatrix );
+    };
+
+    ~SimpleModelEntity() = default;
+    void Update();
+    void execute() override { m_modelAttribute->execute(); };
+
+    const Material& GetMaterial() const { return m_modelAttribute->GetMaterial(); }
+    const CG_Data::UBO* GetMaterialBuffer() const { return m_modelAttribute->GetMaterialBuffer(); }
+
+    const glm::mat4 &GetTransformationMatrix() {
+        m_modelWorldTransform = m_modelLocalTransform * GetTransformMatrix();
+        return m_modelWorldTransform;
+    }
+private:
+    std::shared_ptr<ModelAttribute> m_modelAttribute;
+    glm::mat4 m_modelLocalTransform;
+    glm::mat4 m_modelWorldTransform;
 };
 
 } //namespace GL_Engine

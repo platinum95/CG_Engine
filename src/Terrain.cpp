@@ -1,4 +1,7 @@
 #include "Terrain.h"
+
+#include "Shader.h"
+
 namespace GL_Engine {
 
 #pragma region TerrainGenerator
@@ -290,40 +293,42 @@ namespace GL_Engine {
 	void Terrain::TerrainRenderer(RenderPass &Pass, void* _Data) {
 		auto chunks = static_cast<TerrainPack*>(_Data);
 
-		Pass.shader->useShader();
-		for (auto tex : Pass.Textures) {
-			tex->Bind();
-		}
-		for( auto dLink : Pass.dataLink ){
-			dLink.uniform->SetData( chunks->terrainEntity.GetData( 
-										dLink.eDataIndex ) );
-			dLink.uniform->Update();
-		}
-		auto translationUniformLocation =
-			Pass.shader->getUniform( "GroundTranslation" )->GetID();
-		chunks->terrainEntity.UpdateUniforms();
-		for (auto chunk : chunks->TerrainChunks) {
-			glUniformMatrix4fv( translationUniformLocation, 1, 
-							    GL_FALSE, 
-								glm::value_ptr( chunk->Translation ) );
-			chunk->BindVAO();
-			Pass.DrawFunction();
+		UsingScopedToken( Pass.shader->useShader() ) {
+			for ( auto tex : Pass.Textures ) {
+				tex->Bind();
+			}
+			for ( auto dLink : Pass.dataLink ) {
+				dLink.uniform->SetData( chunks->terrainEntity.GetData(
+					dLink.eDataIndex ) );
+				dLink.uniform->Update();
+			}
+			auto translationUniformLocation =
+				Pass.shader->getUniform( "GroundTranslation" )->GetID();
+			chunks->terrainEntity.UpdateUniforms();
+			for ( auto chunk : chunks->TerrainChunks ) {
+				glUniformMatrix4fv( translationUniformLocation, 1,
+					GL_FALSE,
+					glm::value_ptr( chunk->Translation ) );
+				chunk->BindVAO();
+				Pass.DrawFunction();
+			}
 		}
 	}
 
 	void Terrain::TerrainProjRenderer( RenderPass &rPass, void* _data ) {
 		auto chunks = static_cast< TerrainPack* >( _data );
 
-		rPass.shader->useShader();
-		auto translationUniformLocation =
-			rPass.shader->getUniform( "GroundTranslation" )->GetID();
+		UsingScopedToken( rPass.shader->useShader() ) {
+			auto translationUniformLocation =
+				rPass.shader->getUniform( "GroundTranslation" )->GetID();
 
-		for ( auto chunk : chunks->TerrainChunks ) {
-			glUniformMatrix4fv( translationUniformLocation, 1, 
-							    GL_FALSE, 
-								glm::value_ptr( chunk->Translation ) );
-			chunk->BindVAO();
-			rPass.DrawFunction();
+			for ( auto chunk : chunks->TerrainChunks ) {
+				glUniformMatrix4fv( translationUniformLocation, 1,
+					GL_FALSE,
+					glm::value_ptr( chunk->Translation ) );
+				chunk->BindVAO();
+				rPass.DrawFunction();
+			}
 		}
 	}
 

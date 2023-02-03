@@ -1,12 +1,17 @@
 #ifndef PARTICLE_SYSTEM_H
 #define PARTICLE_SYSTEM_H
 
-#include "CG_Data.h"
-#include "Renderer.h"
+#include "Entity.h"
 
 #include <string>
 
 namespace GL_Engine {
+struct RenderPass;
+namespace CG_Data {
+class UBO;
+class VAO;
+}
+
 class ParticleSystem : public Entity
 {
 public:

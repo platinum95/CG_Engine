@@ -45,7 +45,7 @@ void VBO::BindVBO() const {
     glBindBuffer( Target, this->ID );
 }
 
-void VBO::SetVBOData( void *_Data, uint64_t _DataSize ) const {
+void VBO::SetVBOData( const void *_Data, uint64_t _DataSize ) const {
     glBindBuffer( Target, this->ID );
     glBufferData( Target, _DataSize, _Data, Usage );
 }
@@ -154,7 +154,7 @@ void Texture::SetUnit( const GLuint _Unit ) {
     this->Unit = _Unit;
 }
 
-void Texture::Bind() {
+void Texture::Bind() const {
     glActiveTexture( this->Unit );
     glBindTexture( this->Target, this->ID );
 }
@@ -215,7 +215,7 @@ void Uniform::SetUpdateCallback(
 
 #pragma region UBO
 GLuint UBO::UBO_Count = 0;
-UBO::UBO( void *_Data, size_t _DataSize ) {
+UBO::UBO( const void *_Data, size_t _DataSize ) {
     this->Data = _Data;
     this->DataSize = _DataSize;
     this->Target = GL_UNIFORM_BUFFER;
@@ -228,7 +228,7 @@ UBO::~UBO() {
     this->Cleanup();
 }
 
-void UBO::setData( void *_data ) {
+void UBO::setData( const void *_data ) {
     this->Data = _data;
     this->UpdateUBO();
 }

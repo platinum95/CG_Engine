@@ -1,4 +1,7 @@
 #include "ParticleSystem.h"
+
+#include "Shader.h"
+
 #include <iostream>
 #include <time.h>
 
@@ -201,22 +204,23 @@ namespace GL_Engine {
 		glEnable(GL_PROGRAM_POINT_SIZE);
 		glEnable(GL_BLEND);
 
-		_Pass.shader->useShader();
-		_Pass.BatchVao->BindVAO();
+		UsingScopedToken( _Pass.shader->useShader() ) {
+			_Pass.BatchVao->BindVAO();
 
-		for (auto&& batch : _Pass.batchUnits) {
-			if (batch->active && batch->entity->isActive()) {
-				for (auto l : _Pass.dataLink) {
-					l.uniform->SetData(batch->entity->GetData(l.eDataIndex));
-					l.uniform->Update();
+			for ( auto &&batch : _Pass.batchUnits ) {
+				if ( batch->active && batch->entity->isActive() ) {
+					for ( auto l : _Pass.dataLink ) {
+						l.uniform->SetData( batch->entity->GetData( l.eDataIndex ) );
+						l.uniform->Update();
+					}
+					batch->entity->UpdateUniforms();
+					_Pass.DrawFunction();
 				}
-				batch->entity->UpdateUniforms();
-				_Pass.DrawFunction();
 			}
-		}
 
-		glDisable(GL_BLEND);
-		glDisable(GL_PROGRAM_POINT_SIZE);
+			glDisable( GL_BLEND );
+			glDisable( GL_PROGRAM_POINT_SIZE );
+		}
 	}
 
 }

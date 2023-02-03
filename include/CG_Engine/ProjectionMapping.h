@@ -2,9 +2,11 @@
 #define PROJECTION_MAPPING_H
 
 #include "Camera.h"
-#include "Renderer.h"
+#include "Shader.h"
 
 namespace GL_Engine {
+struct RenderPass;
+class Renderer;
 
 /* Class for Shadow Mapping */
 class ProjectionMapping {

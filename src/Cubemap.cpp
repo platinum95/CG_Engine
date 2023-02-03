@@ -91,10 +91,11 @@ namespace GL_Engine {
     }
 
     void Cubemap::CubemapRenderer(RenderPass& _Pass, void* _Data) {
-        _Pass.shader->useShader();
-        _Pass.BatchVao->BindVAO();
-        _Pass.Textures[0]->Bind();
-        _Pass.DrawFunction();
+        UsingScopedToken( _Pass.shader->useShader() ) {
+            _Pass.BatchVao->BindVAO();
+            _Pass.Textures[ 0 ]->Bind();
+            _Pass.DrawFunction();
+        }
     }
 
 

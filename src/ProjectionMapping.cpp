@@ -1,6 +1,7 @@
-
 #include "ProjectionMapping.h"
+
 #include "ModelLoader.h"
+#include "Renderer.h"
 
 namespace GL_Engine{
 
@@ -164,23 +165,23 @@ namespace GL_Engine{
 
     void 
     ProjectionMapping::defaultRenderFunction( RenderPass& _pass, void* _data ){
-        _pass.shader->useShader();
-        _pass.BatchVao->BindVAO();
-        for (auto tex : _pass.Textures) {
-            tex->Bind();
-        }
-        for (auto&& batch : _pass.batchUnits) {
-            if (batch->active && batch->entity->isActive()) {
-                for (auto l : _pass.dataLink) {
-                    l.uniform->SetData(batch->entity->GetData(l.eDataIndex));
-                    l.uniform->Update();
+        UsingScopedToken( _pass.shader->useShader() ) {
+            _pass.BatchVao->BindVAO();
+            for ( auto tex : _pass.Textures ) {
+                tex->Bind();
+            }
+            for ( auto &&batch : _pass.batchUnits ) {
+                if ( batch->active && batch->entity->isActive() ) {
+                    for ( auto l : _pass.dataLink ) {
+                        l.uniform->SetData( batch->entity->GetData( l.eDataIndex ) );
+                        l.uniform->Update();
+                    }
+                    batch->entity->UpdateUniforms();
+                    batch->entity->update();
+                    _pass.DrawFunction();
                 }
-                batch->entity->UpdateUniforms();
-                batch->entity->update();
-                _pass.DrawFunction();
             }
         }
-	
     }
 
     /* --- Caustic Mapping class --- */
@@ -472,49 +473,49 @@ namespace GL_Engine{
 
     void 
     CausticMapping::defaultRenderFunction( RenderPass& _pass, void* _data ){
-        _pass.shader->useShader();
-        _pass.BatchVao->BindVAO();
-        for (auto tex : _pass.Textures) {
-            tex->Bind();
-        }
-        for (auto&& batch : _pass.batchUnits) {
-            if (batch->active && batch->entity->isActive()) {
-                for (auto l : _pass.dataLink) {
-                    l.uniform->SetData(batch->entity->GetData(l.eDataIndex));
-                    l.uniform->Update();
+        UsingScopedToken( _pass.shader->useShader() ) {
+            _pass.BatchVao->BindVAO();
+            for ( auto tex : _pass.Textures ) {
+                tex->Bind();
+            }
+            for ( auto &&batch : _pass.batchUnits ) {
+                if ( batch->active && batch->entity->isActive() ) {
+                    for ( auto l : _pass.dataLink ) {
+                        l.uniform->SetData( batch->entity->GetData( l.eDataIndex ) );
+                        l.uniform->Update();
+                    }
+                    batch->entity->UpdateUniforms();
+                    batch->entity->update();
+                    _pass.DrawFunction();
                 }
-                batch->entity->UpdateUniforms();
-                batch->entity->update();
-                _pass.DrawFunction();
             }
         }
-	
     }
 
     void 
     CausticMapping::defaultCausticRenderFunction( RenderPass& _pass,
                                                   void* _data ){
-        _pass.shader->useShader();
-        for( auto uniDataPair : _pass.uniforms ){
-            uniDataPair.first->SetData( uniDataPair.second );
-            uniDataPair.first->Update();
-        }
-        _pass.BatchVao->BindVAO();
-        for (auto tex : _pass.Textures) {
-            tex->Bind();
-        }
-        for (auto&& batch : _pass.batchUnits) {
-            if (batch->active && batch->entity->isActive()) {
-                for (auto l : _pass.dataLink) {
-                    l.uniform->SetData(batch->entity->GetData(l.eDataIndex));
-                    l.uniform->Update();
+        UsingScopedToken( _pass.shader->useShader() ) {
+            for ( auto uniDataPair : _pass.uniforms ) {
+                uniDataPair.first->SetData( uniDataPair.second );
+                uniDataPair.first->Update();
+            }
+            _pass.BatchVao->BindVAO();
+            for ( auto tex : _pass.Textures ) {
+                tex->Bind();
+            }
+            for ( auto &&batch : _pass.batchUnits ) {
+                if ( batch->active && batch->entity->isActive() ) {
+                    for ( auto l : _pass.dataLink ) {
+                        l.uniform->SetData( batch->entity->GetData( l.eDataIndex ) );
+                        l.uniform->Update();
+                    }
+                    batch->entity->UpdateUniforms();
+                    batch->entity->update();
+                    _pass.DrawFunction();
                 }
-                batch->entity->UpdateUniforms();
-                batch->entity->update();
-                _pass.DrawFunction();
             }
         }
-	
     }
 
     // Update the lights view to be contained within the scene camera's view

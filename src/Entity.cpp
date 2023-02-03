@@ -1,5 +1,7 @@
 #include "Entity.h"
 
+#include "Shader.h"
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -135,8 +137,8 @@ namespace GL_Engine {
 		//Rotation matrix needs to be inverted to correctly
 		//rotate the vertices. (I think, I was having 
 		//problems when R isn't inverted)
-		this->TransformMatrix = T * glm::inverse(R) * S;
-
+		//this->TransformMatrix = T * glm::inverse(R) * S;
+		this->TransformMatrix = T * R * S;
 	}
 
 	const glm::vec4 Entity::GetPosition() const { 
@@ -384,40 +386,41 @@ namespace GL_Engine {
 		
 		RiggedModel *Model = static_cast<RiggedModel*>(_Data);
 		auto Rig = Model->GetRig();
-		_Pass.shader->useShader();
 
-		for (auto l : _Pass.dataLink) {
-			l.uniform->SetData(Model->GetData(l.eDataIndex));
-			l.uniform->Update();
-		}
-		Model->UpdateUniforms();
-
-		glm::mat4 t(1.0f);
-		auto modelMatLoc = glGetUniformLocation(_Pass.shader->getShaderID(), "model");
-		glUniformMatrix4fv(modelMatLoc, 1, GL_FALSE, glm::value_ptr(Model->GetTransformMatrix()));
-
-		
-		for (auto attrib : Model->ModelAttributes) {
-			attrib->BindVAO();
-			for (auto tex : attrib->ModelTextures) {
-				tex->Bind();
+		UsingScopedToken( _Pass.shader->useShader() ) {
+			for ( auto l : _Pass.dataLink ) {
+				l.uniform->SetData( Model->GetData( l.eDataIndex ) );
+				l.uniform->Update();
 			}
-			auto boneMatLoc = glGetUniformLocation(_Pass.shader->getShaderID(), "BoneMatrices");
-			std::vector<glm::mat4> boneMatrices((const size_t)56, glm::mat4(1.0));
-			int i = 0;
-			if (attrib->meshBones.size() > 0) {
-				int i = 0;
-				for (auto bone : attrib->meshBones) {
-					boneMatrices.at(i++) = bone->FinalTransformation;
+			Model->UpdateUniforms();
+
+			glm::mat4 t( 1.0f );
+			auto modelMatLoc = glGetUniformLocation( _Pass.shader->getShaderID(), "model" );
+			glUniformMatrix4fv( modelMatLoc, 1, GL_FALSE, glm::value_ptr( Model->GetTransformMatrix() ) );
+
+
+			for ( auto attrib : Model->ModelAttributes ) {
+				attrib->BindVAO();
+				for ( auto tex : attrib->ModelTextures ) {
+					tex->Bind();
 				}
-				glUniformMatrix4fv(boneMatLoc, 56, GL_FALSE, glm::value_ptr(boneMatrices[0]));
+				auto boneMatLoc = glGetUniformLocation( _Pass.shader->getShaderID(), "BoneMatrices" );
+				std::vector<glm::mat4> boneMatrices( (const size_t)56, glm::mat4( 1.0 ) );
+				int i = 0;
+				if ( attrib->meshBones.size() > 0 ) {
+					int i = 0;
+					for ( auto bone : attrib->meshBones ) {
+						boneMatrices.at( i++ ) = bone->FinalTransformation;
+					}
+					glUniformMatrix4fv( boneMatLoc, 56, GL_FALSE, glm::value_ptr( boneMatrices[ 0 ] ) );
+				}
+				else {
+					glm::mat4 id( 1.0 );
+					auto boneMatLoc = glGetUniformLocation( _Pass.shader->getShaderID(), "BoneMatrices" );
+					glUniformMatrix4fv( boneMatLoc, 1, GL_FALSE, glm::value_ptr( id ) );
+				}
+				glDrawElements( GL_TRIANGLES, (GLsizei)attrib->GetVertexCount(), GL_UNSIGNED_INT, 0 );
 			}
-			else {
-				glm::mat4 id(1.0);
-				auto boneMatLoc = glGetUniformLocation(_Pass.shader->getShaderID(), "BoneMatrices");
-				glUniformMatrix4fv(boneMatLoc, 1, GL_FALSE, glm::value_ptr(id));
-			}
-			glDrawElements(GL_TRIANGLES, (GLsizei)attrib->GetVertexCount(), GL_UNSIGNED_INT, 0);
 		}
 		
 	}

@@ -1,9 +1,20 @@
 #ifndef TERRAIN_H
 #define TERRAIN_H
 
+#include "CG_Data.h"
+#include "Entity.h"
 #include "Renderer.h"
 
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
+
 namespace GL_Engine {
+
+namespace CG_Data {
+class VBO;
+class VAO;
+}
 
 struct ChunkData {
     std::vector<float> Heights;

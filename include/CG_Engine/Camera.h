@@ -125,6 +125,7 @@ namespace GL_Engine {
     public:
         void execute() override {
             camera->update();
+
             target->execute();
         }
 

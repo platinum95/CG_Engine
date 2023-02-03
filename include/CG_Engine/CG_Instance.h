@@ -8,8 +8,6 @@
 
 namespace GL_Engine {
 
-
-
 class CG_Instance {
 public:
     virtual void initialise() {}
@@ -23,6 +21,9 @@ public:
     }
 
     void tick() {
+        for ( auto &component : m_components ) {
+            component->update();
+        }
         update();
     }
 

@@ -108,12 +108,13 @@ void GUI::setActive( bool _active ){
 void GUI::DefaultRenderer( RenderPass& _rPass, void* _data ) {
     bool active = *( bool * )_data;
     if( active ){
-        _rPass.shader->useShader();
-        _rPass.BatchVao->BindVAO();
-        for (auto tex : _rPass.Textures) {
-            tex->Bind();
+        UsingScopedToken( _rPass.shader->useShader() ) {
+            _rPass.BatchVao->BindVAO();
+            for ( auto tex : _rPass.Textures ) {
+                tex->Bind();
+            }
+            glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
         }
-        glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
     }
 }
 

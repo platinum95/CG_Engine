@@ -4,6 +4,8 @@
 
 namespace GL_Engine{
 
+    std::list<GLuint> Shader::ShaderStack;
+
     Shader::Shader(){
     //    this->uboBlockIndices = std::map< std::string, 
     //                                      std::unique_ptr< UboStruct > >();
@@ -130,7 +132,7 @@ namespace GL_Engine{
         return true;
     }
 
-    void Shader::registerShaderStage( std::string &&_shaderSource,
+    void Shader::registerShaderStage( const std::string &_shaderSource,
                                       GLenum _stageType ){
         ShaderStage *stage = new ShaderStage;
         stage->source = std::move( _shaderSource );
@@ -148,15 +150,15 @@ namespace GL_Engine{
         return;
     }
 
-    void Shader::useShader() const {
+    Shader::ShaderBindToken Shader::useShader() const {
         if ( uboBlockIndices.size() > 0 ) {
-            for ( auto & ubo : uboBlockIndices ) {
+            for ( auto &ubo : uboBlockIndices ) {
                 auto bPost = ubo.second->ubo->GetBindingPost();
                 glUniformBlockBinding( this->shaderID, ubo.second->blockIndex,
-                                       bPost );
+                    bPost );
             }
         }
-        glUseProgram( this->shaderID );
+        return Shader::staticBind( shaderID );
     }
 
     std::shared_ptr< CG_Data::Uniform >
@@ -215,6 +217,10 @@ namespace GL_Engine{
         auto uboStruct = std::make_unique< UboStruct>();
         uboStruct->ubo = _ubo;
         this->uboBlockIndices[ _uboName ] = std::move( uboStruct );
+    }
+
+    void Shader::registerUboPlaceholder( const std::string &_uboName ) {
+        //this->uboBlockIndices[ _uboName ] = std::make_unique<UboStruct>( UboStruct { .ubo = nullptr } );
     }
 
     std::shared_ptr< CG_Data::Uniform > 

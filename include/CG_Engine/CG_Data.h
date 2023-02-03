@@ -48,7 +48,7 @@ public:
     void BindVBO() const;
 
     //Sets the VBO data
-    void SetVBOData( void *_Data, uint64_t _DataSize ) const;
+    void SetVBOData( const void *_Data, uint64_t _DataSize ) const;
 
 protected:
     //The VBO target, e.g. GL_ARRAY_BUFFER
@@ -102,7 +102,7 @@ public:
 
     void SetUnit( const GLuint _Unit );
 
-    void Bind();
+    void Bind() const;
 
     const GLuint GetID() const;
     GLuint ID{ InvalidGlId };
@@ -147,14 +147,18 @@ private:
 */
 class UBO : VBO {
 public:
-    UBO( void *_Data, size_t _DataSize );
+    UBO( const void *_Data, size_t _DataSize );
+
+    template <typename T>
+    UBO( const T *data ) : UBO( static_cast<const void*>( data ), sizeof( T ) ) {}
+
     ~UBO();
     void UpdateUBO() const;
     const GLuint GetBindingPost() const;
-    void setData( void *_data );
+    void setData( const void *_data );
 private:
     bool Initialised{ false };
-    void *Data;
+    const void *Data;
     size_t DataSize;
     GLuint BindingPost;
     static GLuint UBO_Count;
@@ -292,7 +296,7 @@ public:
     const GLuint getID() const;
     void unbind() const;
 
-private:
+public:
     uint16_t width, height;
 
 protected:
@@ -358,7 +362,7 @@ private:
 
 public:
     std::shared_ptr<IRenderable> writeTarget, readTarget;
-private:
+public:
     std::shared_ptr<FBO> m_fbo;
 };
 

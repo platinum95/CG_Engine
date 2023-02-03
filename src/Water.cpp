@@ -186,18 +186,19 @@ void Water::defaultWaterRenderer( RenderPass & _rPass, void * _data ){
     glDisable( GL_CLIP_DISTANCE0 );
     that->Activate();
 
-    that->waterShader->useShader();
-	that->waterVao->BindVAO();
-    that->reflTex->Bind();
-    that->refrTex->Bind();
-    that->dudvTexture->Bind();
-    for( auto dLink : _rPass.dataLink ){
-        dLink.uniform->SetData( that->GetData( dLink.eDataIndex ) );
-        dLink.uniform->Update();
+    UsingScopedToken( that->waterShader->useShader() ) {
+        that->waterVao->BindVAO();
+        that->reflTex->Bind();
+        that->refrTex->Bind();
+        that->dudvTexture->Bind();
+        for ( auto dLink : _rPass.dataLink ) {
+            dLink.uniform->SetData( that->GetData( dLink.eDataIndex ) );
+            dLink.uniform->Update();
+        }
+        that->UpdateUniforms();
+        that->update();
+        _rPass.DrawFunction();
     }
-    that->UpdateUniforms();
-    that->update();
-    _rPass.DrawFunction();
     
 }
 

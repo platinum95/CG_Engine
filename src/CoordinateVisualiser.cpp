@@ -67,23 +67,22 @@ void CoordinateVisualiser::initialise() {
     m_shader.registerShaderStage( std::string( cx_fragmentShaderGl ), GL_FRAGMENT_SHADER );
     m_shader.registerAttribute( "v_vertexPosition", 0 );
     m_shader.compileShader();
-    m_shader.useShader();
+    UsingScopedToken( m_shader.useShader() ) {
+        const auto defaultCoordinateSystem = glm::mat3( 1.0f );
 
-    const auto defaultCoordinateSystem = glm::mat3( 1.0f );
+        m_vao = std::make_unique<CG_Data::VAO>();
+        m_vao->BindVAO();
+        m_indexVbo = std::make_unique<CG_Data::VBO>( (void *)cx_indices.data(), cx_indicesDataLen, GL_STATIC_DRAW, GL_ELEMENT_ARRAY_BUFFER );
 
-    m_vao = std::make_unique<CG_Data::VAO>();
-    m_vao->BindVAO();
-    m_indexVbo = std::make_unique<CG_Data::VBO>( (void*) cx_indices.data(), cx_indicesDataLen, GL_STATIC_DRAW, GL_ELEMENT_ARRAY_BUFFER );
-
-    m_coordinateVbo = std::make_unique<CG_Data::VBO>( nullptr, cx_coordSystemDataLen + cx_originDataLen, GL_DYNAMIC_DRAW, GL_ARRAY_BUFFER );
-    GLint buffSize{ 0 };
-    m_coordinateVbo->BindVBO();
-    glGetBufferParameteriv( GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &buffSize );
-    glBufferSubData( GL_ARRAY_BUFFER, 0, cx_originDataLen, (void*)cx_origin.data() );
-    setCoordinateSystem( defaultCoordinateSystem );
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, nullptr );
-    glEnableVertexAttribArray( 0 );
-
+        m_coordinateVbo = std::make_unique<CG_Data::VBO>( nullptr, cx_coordSystemDataLen + cx_originDataLen, GL_DYNAMIC_DRAW, GL_ARRAY_BUFFER );
+        GLint buffSize{ 0 };
+        m_coordinateVbo->BindVBO();
+        glGetBufferParameteriv( GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &buffSize );
+        glBufferSubData( GL_ARRAY_BUFFER, 0, cx_originDataLen, (void *)cx_origin.data() );
+        setCoordinateSystem( defaultCoordinateSystem );
+        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, nullptr );
+        glEnableVertexAttribArray( 0 );
+    }
     m_initialised = true;
 }
 
@@ -117,10 +116,11 @@ void CoordinateVisualiser::setCoordinateSystem( glm::mat3 coordinateSystem ) {
 
 //-----------------------------------------------------------------------------
 void CoordinateVisualiser::render() {
-    m_shader.useShader();
-    m_vao->BindVAO();
-    glProvokingVertex( GL_LAST_VERTEX_CONVENTION );
-    glDrawElements( GL_LINES, static_cast<GLsizei>( 6 ), GL_UNSIGNED_INT, nullptr );
+    UsingScopedToken( m_shader.useShader() ) {
+        m_vao->BindVAO();
+        glProvokingVertex( GL_LAST_VERTEX_CONVENTION );
+        glDrawElements( GL_LINES, static_cast<GLsizei>( 6 ), GL_UNSIGNED_INT, nullptr );
+    }
 }
 
 } // namespace GL_Engine

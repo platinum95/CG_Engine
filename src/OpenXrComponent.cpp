@@ -494,13 +494,73 @@ void OpenXrComponent::blitToSwapchain() {
 }
 
 void OpenXrComponent::render( std::shared_ptr<IRenderable> renderable ) {
-    if ( m_internal->m_initialised && bind() ) {
-            auto generateCameraRenderNode = [this, renderable] ( uint8_t eyeId ) {
+    //if ( m_internal->m_initialised && bind() ) {
+    //        auto generateCameraRenderNode = [this, renderable] ( uint8_t eyeId ) {
+    //            auto renderNode = std::make_shared<CameraRenderNode>();
+    //            auto pose = m_internal->m_projectionLayerViews[eyeId].pose;
+    //            auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
+    //            XrMatrix4x4f proj;
+    //            XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[eyeId].fov, 0.05f, 100.0f );
+    //            glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
+
+    //            renderNode->camera = m_internal->m_camera;
+    //            renderNode->camera->translateCamera2( glm::vec3( pose.position.x, pose.position.y, pose.position.z ) );
+    //            renderNode->camera->setCameraOrientation( glmQuat );
+    //            renderNode->camera->setProjectionMatrix( *newProj );
+    //            renderNode->camera->update();
+
+    //            renderNode->target = renderable;
+
+    //            auto fboNode = std::make_shared<CG_Data::FboRenderNodeBase>( m_internal->fbos[eyeId] );
+    //           // fboNode->writeTarget = std::move( renderNode );
+    //            fboNode->writeTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId] { glClearColor( 0.0f, 0.0f, 1.0f, 1.0f ); glClear( GL_COLOR_BUFFER_BIT ); } ) );
+    //            fboNode->readTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId] { glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth * eyeId, 0, fboWidth * eyeId, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR ); } ) );
+
+    //            return fboNode;
+    //        };
+
+    //        const auto prePos = m_internal->m_camera->getCameraPosition();
+    //        auto eye1 = generateCameraRenderNode( 0 );
+    //        auto eye2 = generateCameraRenderNode( 1 );
+    //        CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye1 )->execute();
+    //        m_internal->m_camera->setCameraPosition( prePos );
+    //        CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye2 )->execute();
+    //        m_internal->m_camera->setCameraPosition( prePos );
+
+    //    //1
+    //    // glViewport( 0, 0, fboWidth * 2, fboHeight );
+    //    CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye1 )->execute();
+    //    CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye2 )->execute();
+    //    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+    //    glClear( GL_COLOR_BUFFER_BIT );
+    //    unbind();
+    //}
+
+    auto generateCameraRenderNode = [this, renderable] ( uint8_t eyeId ) {
+            auto fboNode = std::make_shared<CG_Data::FboRenderNodeBase>( m_internal->fbos[ eyeId ] );
+            //auto renderNode = std::make_shared<CameraRenderNode>();
+            //auto pose = m_internal->m_projectionLayerViews[ eyeId ].pose;
+            //auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
+            //XrMatrix4x4f proj;
+            //XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[ eyeId ].fov, 0.05f, 100.0f );
+            //glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
+
+
+            //renderNode->camera = m_internal->m_camera;
+            //renderNode->camera->translateCamera2( glm::vec3( pose.position.x, pose.position.y, pose.position.z ) );
+            //renderNode->camera->setCameraOrientation( glmQuat );
+            //renderNode->camera->setProjectionMatrix( *newProj );
+            //renderNode->camera->update();
+
+            //renderNode->target = renderable;
+            //fboNode->writeTarget = renderNode;
+
+            fboNode->writeTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId, renderable] {
                 auto renderNode = std::make_shared<CameraRenderNode>();
-                auto pose = m_internal->m_projectionLayerViews[eyeId].pose;
+                auto pose = m_internal->m_projectionLayerViews[ eyeId ].pose;
                 auto glmQuat = glm::quat( pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z );
                 XrMatrix4x4f proj;
-                XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[eyeId].fov, 0.05f, 100.0f );
+                XrMatrix4x4f_CreateProjectionFov( &proj, GRAPHICS_OPENGL, m_internal->m_projectionLayerViews[ eyeId ].fov, 0.05f, 100.0f );
                 glm::mat4 *newProj = reinterpret_cast<glm::mat4 *>( &proj );
 
                 renderNode->camera = m_internal->m_camera;
@@ -509,26 +569,58 @@ void OpenXrComponent::render( std::shared_ptr<IRenderable> renderable ) {
                 renderNode->camera->setProjectionMatrix( *newProj );
                 renderNode->camera->update();
 
-                auto fboNode = std::make_shared<CG_Data::FboRenderNodeBase>( m_internal->fbos[eyeId] );
-                fboNode->writeTarget = std::move( renderNode );
-                fboNode->readTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId] { glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth * eyeId, 0, fboWidth * eyeId, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR ); } ) );
+                renderNode->target = renderable;
+                renderNode->execute();
+            } ) );
 
-                return fboNode;
-            };
+            fboNode->readTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId] {
+                glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth * eyeId, 0, fboWidth * (eyeId + 1), fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+            } ) );
 
-            const auto prePos = m_internal->m_camera->getCameraPosition();
-            auto eye1 = generateCameraRenderNode( 0 );
-            auto eye2 = generateCameraRenderNode( 1 );
-            CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye1 )->execute();
-            m_internal->m_camera->setCameraPosition( prePos );
-            CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye2 )->execute();
-            m_internal->m_camera->setCameraPosition( prePos );
+            //fboNode->readTarget = std::make_shared<DebugRenderNode>( ( [this, eyeId] { glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth * eyeId, 0, fboWidth * eyeId, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR ); } ) );
+        return fboNode;
+    };
 
-        glViewport( 0, 0, fboWidth * 2, fboHeight );
-        CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye1 )->execute();
-        CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye2 )->execute();
+    const auto prePos = m_internal->m_camera->getCameraPosition();
+    auto eye1 = generateCameraRenderNode( 1 );
+    auto eye2 = generateCameraRenderNode( 0 );
+
+    m_internal->m_camera->setCameraPosition( prePos );
+
+    CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye1 )->execute();
+    m_internal->m_camera->setCameraPosition( prePos );
+    CG_Data::FboRenderNodeBase::GenerateDrawRenderNode( eye2 )->execute();
+    m_internal->m_camera->setCameraPosition( prePos );
+
+    if ( m_internal->m_initialised && bind() ) {
+
+        //glBindFramebuffer( GL_READ_FRAMEBUFFER, eye1->m_fbo->getID() );
+        //CG_Data::FBO::ReadFramebufferStack.push_back( { eye1->m_fbo->getID(), { eye1->m_fbo->width, eye1->m_fbo->height } } );
+        //auto a = CG_Data::FBO::FramebufferBindToken<GL_READ_FRAMEBUFFER>( { eye1->m_fbo->getID(), { eye1->m_fbo->width, eye1->m_fbo->height } } );
+        glBindFramebuffer( GL_READ_FRAMEBUFFER, eye1->m_fbo->getID() );
+        glViewport( 0, 0, eye1->m_fbo->width, eye1->m_fbo->height );
+        //auto a = CG_Data::FBO::staticBind<GL_READ_FRAMEBUFFER>( { eye1->m_fbo->getID(), {eye1->m_fbo->width, eye1->m_fbo->height }}, CG_Data::FBO::ReadFramebufferStack );
+       //UsingScopedToken( eye1->m_fbo->bind<GL_READ_FRAMEBUFFER>() ) {
+            glBlitFramebuffer( 0, 0, fboWidth, fboHeight, 0, 0, fboWidth, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+            //glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth * 1, 0, fboWidth * ( 1 + 1 ), fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+       // }
+
+        //std::move( a ).release();
+        //auto b = CG_Data::FBO::staticBind<GL_READ_FRAMEBUFFER>( { eye2->m_fbo->getID(), {eye2->m_fbo->width, eye2->m_fbo->height } }, CG_Data::FBO::ReadFramebufferStack );
+        glBindFramebuffer( GL_READ_FRAMEBUFFER, eye2->m_fbo->getID() );
+        glViewport( 0, 0, eye2->m_fbo->width, eye2->m_fbo->height );
+        //UsingScopedToken( eye2->m_fbo->bind<GL_READ_FRAMEBUFFER>() ) {
+            glBlitFramebuffer( 0, 0, fboWidth, fboHeight, fboWidth, 0, fboWidth * 2, fboHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+        //}
+            //std::move( b ).release();
+
+        //CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye1 )->execute();
+        //CG_Data::FboRenderNodeBase::GenerateReadRenderNode( eye2 )->execute();
         unbind();
+
+        glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 );
     }
+        //1
 }
 
 } // namespace GL_Engine

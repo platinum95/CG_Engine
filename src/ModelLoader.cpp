@@ -1,5 +1,10 @@
 #include "ModelLoader.h"
+
+#include "AssimpAdapters.h"
+#include "Utilities.h"
+
 #include <filesystem>
+#include <span>
 
 namespace GL_Engine {
     using namespace CG_Data;
@@ -46,9 +51,9 @@ namespace GL_Engine {
         if (mesh->HasNormals()) {
             std::unique_ptr<VBO> normalVBO = std::make_unique<VBO>(mesh->mNormals, mesh->mNumVertices * sizeof(aiVector3D), GL_STATIC_DRAW);
             normalVBO->BindVBO();
-            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-            glEnableVertexAttribArray(2);
-            this->VBOs.push_back(std::move(normalVBO));
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+            glEnableVertexAttribArray( 1 );
+            this->VBOs.push_back( std::move( normalVBO ) );
             NormalIndex = (int) this->VBOs.size() - 1;
         }
         int i = 0;
@@ -62,8 +67,8 @@ namespace GL_Engine {
             }
             std::unique_ptr<VBO> texCoordVBO = std::make_unique<VBO>(&texCoords[0], sizeof(float) * texCoords.size(), GL_STATIC_DRAW);
             texCoordVBO->BindVBO();
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+            glEnableVertexAttribArray(2);
             this->VBOs.push_back(std::move(texCoordVBO));
             TexCoordIndex = (int) this->VBOs.size() - 1;
             texCoords.clear();
@@ -83,6 +88,7 @@ namespace GL_Engine {
             this->VBOs.push_back(std::move(bitangeantVBO));
         }
 
+
         if (mesh->mMaterialIndex != -1) {
             aiMaterial *material = _Scene->mMaterials[mesh->mMaterialIndex];
             ModelLoader::loadMaterial(material,
@@ -96,6 +102,37 @@ namespace GL_Engine {
             ModelLoader::loadMaterial(material,
                 aiTextureType_SHININESS, _PathBase, this->ModelTextures);
 
+            aiShadingMode shadingMode;
+            AssimpMaterial m( material );
+
+            m_material = AssimpAdapters::CreateMaterial( material );
+
+            if ( material->Get( AI_MATKEY_SHADING_MODEL, shadingMode ) == aiReturn::aiReturn_SUCCESS && shadingMode == aiShadingMode::aiShadingMode_Phong ) {
+                auto phongData = m_material.GetComponent<MaterialComponent::Phong, PhongMaterialBufferData>();
+                m_materialBuffer = std::make_unique<CG_Data::UBO>( phongData );
+                m_materialBuffer->UpdateUBO();
+            }
+
+            // TEMP - Find transformation node
+            std::function<const aiNode*(const aiNode*)> findMeshNode = [index, &findMeshNode] ( const aiNode *node ) -> const aiNode* {
+                auto meshIds = std::span<unsigned int>( node->mMeshes, node->mNumMeshes );
+                auto it = std::ranges::find( meshIds, index );
+                if ( it != meshIds.end() ) {
+                    return node;
+                }
+
+                auto children = AssimpContainer( node->mChildren, node->mNumChildren );
+                for ( const auto& child : children ) {
+                    if ( const auto n = findMeshNode( &child ); n ) {
+                        return n;
+                    }
+                }
+                return nullptr;
+            };
+
+            auto node = findMeshNode( _Scene->mRootNode );
+
+            meshSceneTransformation = node ? Utilities::AiToGLMMat4( node->mTransformation ) : glm::mat4( 1.0 );
         }
 
         if( auto numCol = mesh->GetNumColorChannels() ){
@@ -129,7 +166,7 @@ namespace GL_Engine {
     ModelAttribList
 	ModelLoader::loadModel( const std::filesystem::path &_modelPath,
 							unsigned int _flags ){
-        
+
 		auto filePath = std::filesystem::path(_modelPath);
         auto pathBase = filePath.parent_path();
         auto modelFile = filePath.filename();
@@ -152,7 +189,7 @@ namespace GL_Engine {
         aImporter.FreeScene();
         return attributes;
     }
-    
+
     void LoadAnimations(std::map<std::string, std::shared_ptr<SceneNode>> &NodeList, const aiScene *_Scene) {
         for (unsigned int animID = 0; animID < _Scene->mNumAnimations; animID++) {
             aiAnimation* anim = _Scene->mAnimations[animID];

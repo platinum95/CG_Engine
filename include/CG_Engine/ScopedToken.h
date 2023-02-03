@@ -26,7 +26,10 @@ public:
 
     bool isValid() { return m_id != C(); };
 
-    void release() && {};
+    void release() && {
+        std::move( this )->~ScopedToken();
+        m_id = C();
+    };
 
     ScopedToken( const ScopedToken & ) = delete;
     ScopedToken &operator=( const ScopedToken & ) = delete;
